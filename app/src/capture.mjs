@@ -163,6 +163,11 @@ function scan(text, today) {
 
 const TASK = /^(?:task|todo|to-do|to do)\b[\s:–-]*/i;
 
+/* What an item from WhatsApp keeps in its notes: the message it replied
+ * to, and where it came from — and from whom, in a group. */
+export const notesFor = ({ quoted, sender }, where) =>
+  [quoted, `From WhatsApp: ${where ?? "Message yourself"}${sender ? `, ${sender}` : ""}`].filter(Boolean).join("\n\n");
+
 /* A 📅 message → what it puts on the calendar:
  *   {kind: 'event', title, day, endDay, time, endTime, notes, why}
  *   {kind: 'task', title, due, notes, why}
@@ -178,7 +183,7 @@ export function readCapture({ text, quoted, sent_at: sentAt, sender = null }, { 
   const day = own.day ? own : theirs?.day ? theirs : null;
   const time = own.time ? own : theirs?.time ? theirs : null;
   const title = tidy(own.rest) || (theirs ? tidy(firstLine(theirs.rest)) || tidy(firstLine(quoted)) : "") || "Untitled";
-  const notes = [quoted, `From WhatsApp: ${where ?? "Message yourself"}${sender ? `, ${sender}` : ""}`].filter(Boolean).join("\n\n");
+  const notes = notesFor({ quoted, sender }, where);
 
   if (asTask || (day && !time && (own.by || (!own.day && theirs?.by))) || (!day && !time)) {
     return {
@@ -225,29 +230,85 @@ export function reminderFor(event, minutes) {
 
 export const POLL_MS = 15_000;
 const KEEP_DAYS = 31;
+/* A message with no 📅, in a group where every message counts, waits for
+ * Claude while it cannot be reached — this long, then it is let go. */
+const WAIT_FOR_CLAUDE_MS = 6 * 60 * 60_000;
+/* After a failed call, Claude is not asked again for this long: a busy or
+ * unreachable API, or a refused key (an hour — someone has to fix it). */
+const CLAUDE_PAUSE_MS = { retry: 2 * 60_000, refused: 60 * 60_000 };
+const LATER = Symbol("later");
 
-export function createCapture({ db, bridge, scheduler, log, clock = () => new Date() }) {
+/* `claude`: claude.mjs's reader, when there is an API key; else null, and
+ * 📅 messages are read by the rules above, and no group can have every
+ * message count. */
+export function createCapture({ db, bridge, scheduler, log, claude = null, clock = () => new Date() }) {
   let busy = false;
   let timer = null;
   let lastProblem = null;
+  let claudeAfter = 0;
 
   /* Where a 📅 message was sent, by name: a group as WhatsApp last listed
    * it, or null for Message yourself. */
   const whereOf = (command) => (command.chat === "group" ? db.chats.names().get(command.chat_id) || "a group" : null);
 
-  /* The chats 📅 messages count in now: none while switched off. */
-  const chosen = (settings) => (settings.capture ? [...new Set(settings.captureChats)].sort() : []);
+  /* The chats messages count in now (none while switched off), and the
+   * groups where every message does (only with Claude to read them). */
+  const chosen = (settings) => (settings.capture ? [...new Set([...settings.captureChats, ...everyOf(settings)])].sort() : []);
+  const everyOf = (settings) => (settings.capture && claude ? [...new Set(settings.captureEvery)].sort() : []);
   const keyOf = (command) => (command.chat === "self" ? "self" : command.chat_id);
 
-  /* Puts one 📅 message on the calendar. → what it became, or null. */
-  function take(command, settings) {
+  /* Claude's reading of a message: {reading}; {later} when Claude cannot
+   * be had now (none, paused, or the call failed); {unusable} when it
+   * answered, but not with something to use. */
+  async function askClaude(command, settings) {
+    if (!claude || clock().getTime() < claudeAfter) return { later: true };
+    try {
+      return { reading: await claude.read(command, { timeZone: settings.timezone }) };
+    } catch (err) {
+      if (err.refused) {
+        claudeAfter = clock().getTime() + CLAUDE_PAUSE_MS.refused;
+        log.error({ err: err.message }, "📅 messages: Claude could not be used; trying again in an hour");
+        return { later: true };
+      }
+      if (err.retry) {
+        claudeAfter = clock().getTime() + CLAUDE_PAUSE_MS.retry;
+        log.warn({ err: err.message }, "📅 messages: Claude did not answer; asking again in a while");
+        return { later: true };
+      }
+      log.warn({ message_id: command.id, err: err.message }, "📅 messages: Claude's reading would not do");
+      return { unusable: true };
+    }
+  }
+
+  /* Puts one message on the calendar. → what it became; null when it was
+   * let go without adding anything; LATER to leave it with the bridge. */
+  async function take(command, settings) {
     if (!chosen(settings).includes(keyOf(command))) {
       // Held by the bridge before the chat was let go of: not added.
       db.captures.record(command);
       return null;
     }
-    const read = readCapture(command, { timeZone: settings.timezone, where: whereOf(command) });
-    const item = read.kind === "event" ? { ...read, remind: reminderFor(read, settings.defaultRemind) } : read;
+    const marked = command.marked !== false;
+    const where = whereOf(command);
+    const asked = await askClaude(command, settings);
+    let item = asked.reading ?? null;
+    if (!marked && (asked.unusable || item?.kind === "none")) {
+      // Nothing for the calendar — or nothing Claude could make of it.
+      db.captures.record(command);
+      return null;
+    }
+    if (!item || item.kind === "none") {
+      if (!marked) {
+        // Nothing reads a message without the 📅 but Claude: wait for it.
+        if (clock().getTime() - Date.parse(command.sent_at) < WAIT_FOR_CLAUDE_MS) return LATER;
+        db.captures.record(command);
+        return null;
+      }
+      item = readCapture(command, { timeZone: settings.timezone, where });
+    } else {
+      item = { ...item, notes: notesFor(command, where), sender: command.sender ?? null, why: null };
+    }
+    if (item.kind === "event") item = { ...item, remind: reminderFor(item, settings.defaultRemind) };
     return db.transaction(() => {
       const id =
         item.kind === "event"
@@ -260,11 +321,13 @@ export function createCapture({ db, bridge, scheduler, log, clock = () => new Da
 
   /* The bridge acts on the chats it was last told of — none after it
    * starts. Told again whenever that is not what Settings says. */
-  async function tellChats(has, settings) {
-    const wanted = chosen(settings);
-    if (!Array.isArray(has) || [...has].sort().join(" ") === wanted.join(" ")) return;
-    await bridge.setCommandChats(wanted);
-    log.info({ self: wanted.includes("self"), groups: wanted.filter((c) => c !== "self").length }, "📅 messages: told the bridge where they count");
+  async function tellChats(held, settings) {
+    const chats = chosen(settings);
+    const every = everyOf(settings);
+    if (!Array.isArray(held.chats)) return; // a bridge from before chosen chats
+    if ([...held.chats].sort().join(" ") === chats.join(" ") && [...(held.every ?? [])].sort().join(" ") === every.join(" ")) return;
+    await bridge.setCommandChats(chats, every);
+    log.info({ self: chats.includes("self"), groups: chats.filter((c) => c !== "self").length, every_message: every.length }, "📅 messages: told the bridge where they count");
   }
 
   /* Takes what the bridge holds, answers each, and tells it to let them go.
@@ -278,7 +341,7 @@ export function createCapture({ db, bridge, scheduler, log, clock = () => new Da
       try {
         const held = await bridge.commands();
         commands = held.commands ?? [];
-        await tellChats(held.chats, settings);
+        await tellChats(held, settings);
       } catch (err) {
         // Not linked, not running, or a bridge from before 📅 messages: the
         // next poll asks again. Said once, not every 15 s.
@@ -292,7 +355,8 @@ export function createCapture({ db, bridge, scheduler, log, clock = () => new Da
       const taken = [];
       for (const command of [...commands].sort((a, b) => a.sent_at.localeCompare(b.sent_at))) {
         if (!db.captures.has(command.id)) {
-          const item = take(command, settings);
+          const item = await take(command, settings);
+          if (item === LATER) continue;
           if (item) {
             added++;
             log.info({ message_id: command.id, kind: item.kind }, "📅 message put on the calendar"); // never its text
@@ -305,7 +369,9 @@ export function createCapture({ db, bridge, scheduler, log, clock = () => new Da
         }
         taken.push(command.id);
       }
-      await bridge.ackCommands(taken).catch((err) => log.warn({ code: err.code }, "📅 messages: the bridge was not told; they are taken once all the same"));
+      if (taken.length) {
+        await bridge.ackCommands(taken).catch((err) => log.warn({ code: err.code }, "📅 messages: the bridge was not told; they are taken once all the same"));
+      }
       db.captures.prune(new Date(clock().getTime() - KEEP_DAYS * 86_400_000).toISOString().replace(/\.\d{3}Z$/, "Z"));
       return added;
     } finally {

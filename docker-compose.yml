@@ -26,6 +26,8 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       SESSION_SECRET: ${SESSION_SECRET:-}
       DEFAULT_TIMEZONE: ${DEFAULT_TIMEZONE:-Asia/Kolkata}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_WORKSPACE_ID: ${ANTHROPIC_WORKSPACE_ID:-}
     # This computer only. To reach it from elsewhere, use the tunnel below —
     # never publish it on 0.0.0.0.
     ports:

@@ -5,6 +5,11 @@
  * linked account's own chat (Message yourself, "self"), where only it
  * writes. The app turns each into an event or a task.
  *
+ * A chosen group can also be one where EVERY message counts, mark or not —
+ * the owner's choice, for a group kept for the calendar: then each message
+ * with text in it is held, and the app has Claude read it and add what is
+ * an event or a task (`marked` says whether it had the 📅).
+ *
  * Which chats those are, the app says (POST /commands/chats); until it has,
  * after the bridge starts, there are none. A group not chosen is not even
  * decrypted (session.mjs, ignoresSender) — but for a quarter of an hour after
@@ -74,8 +79,8 @@ export const chatKey = (chat, chatId) => (chat === "self" ? "self" : chatId);
  *   null        anything else.
  * `mine`: the linked account's own JIDs, normalised (its phone number and its
  * LID) — its own chat is either. `chats`: the chats chosen, as chatKey()
- * names them. */
-export function readMessage(msg, mine, chats, now = Date.now()) {
+ * names them; `every`: the groups among them where every message counts. */
+export function readMessage(msg, mine, chats, every = new Set(), now = Date.now()) {
   if (!msg?.key || !msg.message) return null;
   const chatId = msg.key.remoteJid ? jidNormalizedUser(msg.key.remoteJid) : "";
   const chat = isJidGroup(chatId) ? "group" : mine.has(chatId) ? "self" : null;
@@ -83,8 +88,9 @@ export function readMessage(msg, mine, chats, now = Date.now()) {
   const fromMe = msg.key.fromMe === true;
   if (chat === "self" && !fromMe) return null;
   const text = textOf(msg.message);
-  if (text === null) return null;
-  if (!MARK.test(text)) {
+  if (text === null || !text.trim()) return null;
+  const marked = MARK.test(text);
+  if (!marked && !every.has(chatId)) {
     if (!CALENDARS.test(text)) return null;
     return { skipped: /^\s*\u{1F5D3}/u.test(text) ? "it starts with 🗓️, which is not 📅 or 📆" : "the 📅 is not at the start" };
   }
@@ -101,6 +107,7 @@ export function readMessage(msg, mine, chats, now = Date.now()) {
       sent_at: new Date(sentAt).toISOString(),
       text: clip(text.replace(MARK, "").trim()),
       quoted: quotedText?.trim() ? clip(quotedText.trim()) : null,
+      marked,
       from_me: fromMe,
       sender: fromMe ? null : nameOf(msg.pushName),
     },

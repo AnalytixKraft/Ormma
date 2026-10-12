@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createCapture, readCapture, renderCaptureReply } from "../src/capture.mjs";
+import { ClaudeFailed } from "../src/claude.mjs";
 import { openDb } from "../src/db.mjs";
 import { silentLog } from "../src/log.mjs";
 import { createScheduler } from "../src/scheduler.mjs";
@@ -82,6 +83,7 @@ function fakeBridge(held) {
   return {
     held,
     chats: [],
+    chatsEvery: [],
     told: [],
     sent: [],
     acked: [],
@@ -93,12 +95,13 @@ function fakeBridge(held) {
       return { message_id: `M${this.sent.length}`, chat_id: chatId, deduplicated: false };
     },
     async commands() {
-      return { commands: this.held, chats: this.chats };
+      return { commands: this.held, chats: this.chats, every: this.chatsEvery };
     },
-    async setCommandChats(chats) {
+    async setCommandChats(chats, every = []) {
       this.told.push(chats);
       this.chats = chats;
-      return { chats };
+      this.chatsEvery = every;
+      return { chats, every };
     },
     async ackCommands(ids) {
       this.acked.push(...ids);
@@ -111,14 +114,29 @@ function fakeBridge(held) {
 const FAMILY = "120363000000000001@g.us";
 const SELF_JID = "447700900077@s.whatsapp.net";
 
-function setup(held, settings = {}) {
+function setup(held, settings = {}, claude = null) {
   const db = openDb(":memory:");
   const bridge = fakeBridge(held);
-  const clock = () => new Date("2026-10-08T05:00:00Z");
+  let now = new Date("2026-10-08T05:00:00Z");
+  const clock = () => now;
   const scheduler = createScheduler({ db, bridge, log: silentLog, clock, pause: async () => {}, gap: () => 0 });
   db.settings.save({ enabled: true, timezone: "Asia/Kolkata", captureChats: ["self", FAMILY], ...settings });
   db.chats.remember([{ id: FAMILY, subject: "Family" }]);
-  return { db, bridge, capture: createCapture({ db, bridge, scheduler, log: silentLog, clock }) };
+  return { db, bridge, capture: createCapture({ db, bridge, scheduler, log: silentLog, clock, claude }), at: (iso) => (now = new Date(iso)) };
+}
+
+/* Stands in for claude.mjs's reader: answers by the message's words. */
+function fakeClaude(answers) {
+  return {
+    model: "claude-haiku-5-5",
+    asked: [],
+    async read(command) {
+      this.asked.push(command.id);
+      const answer = answers[command.text];
+      if (answer instanceof Error) throw answer;
+      return answer;
+    },
+  };
 }
 
 const command = (id, text, extra = {}) => ({ id, chat: "self", chat_id: SELF_JID, sent_at: SENT, text, quoted: null, from_me: true, sender: null, ...extra });
@@ -199,4 +217,74 @@ test("a bridge without 📅 messages (or not there at all) is no error", async (
   };
   assert.equal(await capture.poll(), 0);
   assert.equal(await capture.poll(), 0);
+});
+
+test("with Claude, a group can have every message count: what is an event or a task is added, the rest let go quietly", async () => {
+  const claude = fakeClaude({
+    "Doctor tue 10 am": { kind: "event", title: "Doctor", day: "2026-10-13", endDay: null, time: "10:00", endTime: "" },
+    "Thanks all!": { kind: "none" },
+    "dinner at Ravi's next Friday after 8": { kind: "event", title: "Dinner at Ravi's", day: "2026-10-16", endDay: null, time: "20:00", endTime: "" },
+  });
+  const { db, bridge, capture } = setup(
+    [
+      inFamily("A", "Doctor tue 10 am", { marked: false }),
+      inFamily("B", "Thanks all!", { marked: false }),
+      command("C", "dinner at Ravi's next Friday after 8"),
+    ],
+    { captureChats: ["self"], captureEvery: [FAMILY], calendarTo: FAMILY },
+    claude,
+  );
+  assert.equal(await capture.poll(), 2);
+  assert.deepEqual(bridge.told.at(-1), [FAMILY, "self"]);
+  assert.deepEqual(bridge.chatsEvery, [FAMILY], "the bridge is told which group has every message count");
+  const doctor = db.events.between("2026-10-13", "2026-10-13")[0];
+  assert.deepEqual([doctor.title, doctor.time, doctor.remind, doctor.notes], ["Doctor", "10:00", 5, "From WhatsApp: Family, Anu"]);
+  assert.equal(db.events.between("2026-10-16", "2026-10-16")[0].title, "Dinner at Ravi's", "free-form, read by Claude");
+  assert.deepEqual(bridge.sent.map((s) => [s.key, s.chatId]), [["capture:A", FAMILY], ["capture:C", FAMILY]], "no answer to chat");
+  assert.deepEqual(bridge.acked, ["A", "B", "C"]);
+});
+
+test("when Claude cannot be had, a 📅 message is read by the rules; one without the 📅 waits for it — six hours at most", async () => {
+  const claude = fakeClaude({ "Dentist Tue 10am": new ClaudeFailed("down", { retry: true }), "Doctor tue 10 am": new ClaudeFailed("down", { retry: true }) });
+  const { db, bridge, capture, at } = setup([command("A", "Dentist Tue 10am"), inFamily("B", "Doctor tue 10 am", { marked: false })], { captureEvery: [FAMILY] }, claude);
+  assert.equal(await capture.poll(), 1);
+  assert.equal(db.events.between("2026-10-13", "2026-10-13")[0].title, "Dentist", "the rules read it");
+  assert.deepEqual(bridge.acked, ["A"], "B stays with the bridge");
+  assert.equal(claude.asked.length, 1, "after a failed call, Claude is left alone for a while");
+
+  at("2026-10-08T05:03:00Z");
+  claude.read = async () => ({ kind: "event", title: "Doctor", day: "2026-10-13", endDay: null, time: "10:00", endTime: "" });
+  assert.equal(await capture.poll(), 1, "back: B is read");
+  assert.deepEqual(bridge.acked, ["A", "B"]);
+
+  const late = setup([inFamily("B", "Doctor tue 10 am", { marked: false })], { captureEvery: [FAMILY] }, fakeClaude({ "Doctor tue 10 am": new ClaudeFailed("down", { retry: true }) }));
+  late.at("2026-10-08T10:31:00Z"); // six hours after it was sent
+  assert.equal(await late.capture.poll(), 0);
+  assert.deepEqual([late.bridge.acked, late.db.events.count()], [["B"], 0], "let go, unread");
+});
+
+test("a 📅 message is always added — the rules read it when Claude finds nothing in it", async () => {
+  const { db, capture } = setup([command("A", "Buy batteries")], {}, fakeClaude({ "Buy batteries": { kind: "none" } }));
+  assert.equal(await capture.poll(), 1);
+  assert.equal(db.tasks.open()[0].title, "Buy batteries");
+});
+
+test("without Claude, no group has every message count", async () => {
+  const { bridge, capture } = setup([], { captureChats: ["self"], captureEvery: [FAMILY] });
+  await capture.poll();
+  assert.deepEqual([bridge.told.at(-1), bridge.chatsEvery], [["self"], []]);
+});
+
+test("a call Claude refuses pauses it for an hour — no asking again every poll; an answer it cannot make sense of lets a message without the 📅 go", async () => {
+  const claude = fakeClaude({ "Doctor tue 10 am": new ClaudeFailed("not scoped to a workspace", { refused: true }) });
+  const { bridge, capture, at } = setup([inFamily("B", "Doctor tue 10 am", { marked: false })], { captureEvery: [FAMILY] }, claude);
+  await capture.poll();
+  await capture.poll();
+  at("2026-10-08T05:50:00Z");
+  await capture.poll();
+  assert.deepEqual([claude.asked.length, bridge.acked], [1, []], "asked once in the hour; the message waits");
+
+  const muddled = setup([inFamily("C", "🙂", { marked: false })], { captureEvery: [FAMILY] }, fakeClaude({ "🙂": new ClaudeFailed("not JSON") }));
+  assert.equal(await muddled.capture.poll(), 0);
+  assert.deepEqual([muddled.bridge.acked, muddled.bridge.sent], [["C"], []]);
 });

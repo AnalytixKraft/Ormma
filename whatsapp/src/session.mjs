@@ -302,6 +302,7 @@ export async function startSession() {
    * one of those two. */
   const held = new HeldCommands();
   let commandChats = new Set();
+  let everyMessage = new Set();
   const postedIn = new TtlCache(LISTEN_MS);
   const listenedGroups = { has: (jid) => commandChats.has(jid) || postedIn.has(jid) };
   /* pair(), logout() and the pairing deadline each read the state, await
@@ -484,7 +485,7 @@ export async function startSession() {
         try {
           const mine = myJids(socket);
           for (const message of messages) {
-            const read = readMessage(message, mine, commandChats);
+            const read = readMessage(message, mine, commandChats, everyMessage);
             // The log has the chat's kind and the message's id: never its
             // text, never who sent it.
             const added = read?.command ? held.add(read.command) : null;
@@ -899,14 +900,19 @@ export async function startSession() {
     send,
     commands: () => held.list(),
     ackCommands: (ids) => held.ack(ids),
-    commandChats: () => [...commandChats].sort(),
+    commandChats: () => ({ chats: [...commandChats].sort(), every: [...everyMessage].sort() }),
     /* The chats 📅 messages count in, as the app says: "self" and group
-     * ids. What was held from a chat no longer in it goes. */
-    setCommandChats(chats) {
-      commandChats = new Set(chats);
+     * ids; and the groups among them where every message counts. What was
+     * held from a chat no longer in them goes. */
+    setCommandChats(chats, every = []) {
+      everyMessage = new Set(every);
+      commandChats = new Set([...chats, ...everyMessage]);
       held.keepOnly(commandChats);
-      log.info({ self: commandChats.has("self"), groups: [...commandChats].filter((c) => c !== "self").length }, "📅 messages: chats chosen");
-      return [...commandChats].sort();
+      log.info(
+        { self: commandChats.has("self"), groups: [...commandChats].filter((c) => c !== "self").length, every_message: everyMessage.size },
+        "📅 messages: chats chosen",
+      );
+      return { chats: [...commandChats].sort(), every: [...everyMessage].sort() };
     },
     stop,
   };

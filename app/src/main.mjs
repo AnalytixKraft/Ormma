@@ -5,6 +5,7 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { createBridge } from "./bridge.mjs";
 import { createCapture } from "./capture.mjs";
+import { createClaudeReader } from "./claude.mjs";
 import { loadConfig } from "./config.mjs";
 import { openDb } from "./db.mjs";
 import { log } from "./log.mjs";
@@ -19,8 +20,9 @@ const db = openDb(join(config.dataDir, "birthdays.db"), {
 });
 const bridge = createBridge({ url: config.bridgeUrl, token: config.bridgeToken });
 const scheduler = createScheduler({ db, bridge, log });
-const capture = createCapture({ db, bridge, scheduler, log });
-const server = await createApp({ config, problems, db, bridge, scheduler, log });
+const claude = config.anthropicApiKey ? createClaudeReader({ apiKey: config.anthropicApiKey, workspaceId: config.anthropicWorkspaceId, log }) : null;
+const capture = createCapture({ db, bridge, scheduler, log, claude });
+const server = await createApp({ config, problems, db, bridge, scheduler, log, claude });
 
 server.listen(config.port, config.host, () => {
   log.info({ port: config.port }, "listening");

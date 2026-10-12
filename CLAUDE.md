@@ -31,6 +31,14 @@ The rule exists because it was broken once: an agent "checking" `/send`
 against a bridge it believed was unlinked posted a real message from its
 owner's number to a stranger.
 
+## The Claude API key
+
+`ANTHROPIC_API_KEY` (and `ANTHROPIC_WORKSPACE_ID`) live in `.env`, like the
+other secrets: never print them, log them, or put them in a commit, a test or
+a page. Tests use stand-in clients (`app/test/claude.test.mjs`); a real call,
+when one is needed to check the request, carries made-up text only — never
+anyone's messages.
+
 ## Where things are
 
 - `app/` — the pages, the database and the scheduler. Tests:

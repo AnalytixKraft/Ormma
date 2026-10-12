@@ -35,8 +35,9 @@ keeping the text path only, and adding messages to people's numbers.
   starts with 📅 or 📆, in a chat the owner chose in the app (*Settings →
   Calendar*, sent here as `POST /commands/chats`): a group, where **anyone in
   it** may send one, or the linked account's own chat (*Message yourself*),
-  where only it writes ([`src/commands.mjs`](src/commands.mjs)). At most 30 an
-  hour from one chat. Its text, the text of the message it replies to, and
+  where only it writes ([`src/commands.mjs`](src/commands.mjs)) — or, in a
+  group the owner chose for it (`every`), any message with text, 📅 or not:
+  the app has Claude read it. At most 30 an hour from one chat. Its text, the text of the message it replies to, and
   its sender's display name are held in memory — never on disk, never in the
   log — until the app takes them (`GET /commands`, `POST /commands/ack`): at
   most 100, for at most 3 days. Until the app has said which chats, after a
@@ -106,8 +107,8 @@ is something to add.
 | `POST /logout` | Unlinks: tells WhatsApp if connected (so the phone's list drops the device), wipes `/data/auth`, → `idle`. |
 | `GET /groups` | `200 {"groups":[{"id","subject","participants","announce","is_admin"}]}`, sorted by subject. `409 not_connected` unless `open`; `502 groups_failed` if WhatsApp does not answer. |
 | `POST /send` | `{"chat_id","text","idempotency_key"}` → `200 {"message_id","chat_id","deduplicated"}`. `chat_id` is a group (`…@g.us`) or a phone number (`919876543210@s.whatsapp.net`). |
-| `GET /commands` | `200 {"commands":[{"id","chat","chat_id","sent_at","text","quoted","from_me","sender"}],"chats":[…]}`: the 📅 messages held, oldest first, and the chats they count in. `chat` is `group` or `self`; `text` is what follows the 📅; `quoted` the text of the message it replies to, or `null`; `sender` the sender's display name when it is not the linked account. In any state — it is the bridge's memory, not a call to WhatsApp. |
-| `POST /commands/chats` | `{"chats":["self","…@g.us"]}` → `200 {"chats"}`: the chats 📅 messages count in from now on — `self` and group ids; what was held from any other goes. `400 invalid_chats` otherwise. |
+| `GET /commands` | `200 {"commands":[{"id","chat","chat_id","sent_at","text","quoted","marked","from_me","sender"}],"chats":[…],"every":[…]}`: the messages held, oldest first, the chats they count in, and the groups where every message does. `chat` is `group` or `self`; `text` is what follows the 📅 (all of it, unmarked); `marked` whether it had the 📅; `quoted` the text of the message it replies to, or `null`; `sender` the sender's display name when it is not the linked account. In any state — it is the bridge's memory, not a call to WhatsApp. |
+| `POST /commands/chats` | `{"chats":["self","…@g.us"],"every":["…@g.us"]}` → `200 {"chats","every"}`: the chats 📅 messages count in from now on — `self` and group ids — and the groups among them where every message does (`every` may be left out); what was held from any other goes. `400 invalid_chats` otherwise. |
 | `POST /commands/ack` | `{"ids":[…]}` → `200 {"acked"}`: the app has these; let them go. `400 invalid_ids` unless an array of up to 500 non-empty strings. The app's poller is the one caller: anything else taking them takes them off the calendar. |
 
 `/send` refuses, in this order:

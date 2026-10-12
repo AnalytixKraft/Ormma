@@ -17,7 +17,8 @@
  *   GET  /commands        the 📅 messages the owner sent, held for the app,
  *                         and the chats they count in
  *   POST /commands/ack    the app has these: let them go
- *   POST /commands/chats  the chats 📅 messages count in: "self", groups
+ *   POST /commands/chats  the chats 📅 messages count in: "self", groups —
+ *                         and the groups where every message counts
  */
 
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -58,13 +59,16 @@ const ROUTES = {
 /* What /commands/ack takes: the ids /commands gave, at most a few hundred. */
 const MAX_ACK = 500;
 
-/* What /commands/chats takes: "self" (Message yourself) and group ids. */
+/* What /commands/chats takes: "self" (Message yourself) and group ids, and
+ * `every`, groups only. */
 function parseChats(body) {
-  const { chats } = body;
-  if (!Array.isArray(chats) || chats.length > MAX_ACK || !chats.every((c) => c === "self" || (typeof c === "string" && GROUP_JID.test(c)))) {
+  const { chats, every = [] } = body;
+  const group = (c) => typeof c === "string" && GROUP_JID.test(c);
+  if (!Array.isArray(chats) || chats.length > MAX_ACK || !chats.every((c) => c === "self" || group(c))) {
     throw new BridgeError(400, "invalid_chats");
   }
-  return chats;
+  if (!Array.isArray(every) || every.length > MAX_ACK || !every.every(group)) throw new BridgeError(400, "invalid_chats");
+  return { chats, every };
 }
 
 function parseAck(body) {
@@ -190,9 +194,11 @@ export function createApi({ token, session }) {
       case "/send":
         return reply(res, 200, await session.send(parseSend(await readJson(req))));
       case "/commands":
-        return reply(res, 200, { commands: session.commands(), chats: session.commandChats() });
-      case "/commands/chats":
-        return reply(res, 200, { chats: session.setCommandChats(parseChats(await readJson(req))) });
+        return reply(res, 200, { commands: session.commands(), ...session.commandChats() });
+      case "/commands/chats": {
+        const { chats, every } = parseChats(await readJson(req));
+        return reply(res, 200, session.setCommandChats(chats, every));
+      }
       case "/commands/ack":
         return reply(res, 200, { acked: session.ackCommands(parseAck(await readJson(req))) });
     }
