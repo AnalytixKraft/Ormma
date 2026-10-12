@@ -13,6 +13,8 @@
  *   📅 Buy batteries                 a task: no day, no time
  *   a reply of 📅 to "Choir moves to Sat 6pm"
  *                                    an event "Choir moves", Saturday 18:00
+ *   a reply of "delete" to "✅ Added to the calendar: *Doc* …"
+ *                                    Doc taken off the calendar again
  *
  * Days and times are read from the day the message was sent, in the app's
  * time zone — not the moment it is read, which can be hours later when this
@@ -221,6 +223,18 @@ export function renderCaptureReply(item) {
   ].join("\n");
 }
 
+/* A reply that asks to take something off the calendar again. */
+const DELETE = /^\s*(?:please\s+)?(?:delete|remove|cancel|del)\b|^\s*(?:\u274C|\u2716|\u{1F5D1})/iu;
+export const isDelete = (text) => DELETE.test(text);
+
+/* What was deleted, in the answer: an event by its day and time. */
+function deletedLine(kind, item) {
+  if (kind === "task") return `🗑️ Deleted the task: *${item.title}*`;
+  const short = (day) => formatShortDate(fromIsoDate(day));
+  const days = item.endDay ? `${short(item.day)} – ${short(item.endDay)}` : short(item.day);
+  return `🗑️ Deleted: *${item.title}* — ${days}, ${timeRange(item) || "all day"}`;
+}
+
 /* The reminder a new event gets, as Settings says — when it can have it: an
  * all-day event only one a day or more ahead. */
 export function reminderFor(event, minutes) {
@@ -280,14 +294,36 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, clock
     }
   }
 
-  /* Puts one message on the calendar. → what it became; null when it was
-   * let go without adding anything; LATER to leave it with the bridge. */
+  /* A reply to one of the app's own "✅ Added …": "delete" takes that off
+   * the calendar again; anything else is not read as something new. The
+   * answer, or null to let it go unanswered. */
+  function answerReply(command, answered) {
+    db.captures.record(command);
+    const added = db.captures.get(answered.key.replace(/^capture:/, ""));
+    if (!added?.kind || !added.item_id) return null; // an answer to a delete, say
+    const title = answered.title ?? "it";
+    if (!isDelete(command.text)) {
+      return { title, text: `Only “delete” works as a reply to that. To change *${title}*, open Wish Calendar → Calendar.` };
+    }
+    const item = added.kind === "event" ? db.events.get(added.item_id) : db.tasks.get(added.item_id);
+    if (!item) return { title, text: `*${title}* was deleted already.` };
+    if (added.kind === "event") db.events.remove(item.id);
+    else db.tasks.remove(item.id);
+    log.info({ message_id: command.id, kind: added.kind }, "📅 message: deleted by a reply"); // never its text
+    return { title: item.title, text: deletedLine(added.kind, item) };
+  }
+
+  /* Puts one message on the calendar. → what it became; {answer} for a
+   * reply to the app's own "✅ Added …"; null when it was let go without
+   * adding anything; LATER to leave it with the bridge. */
   async function take(command, settings) {
     if (!chosen(settings).includes(keyOf(command))) {
       // Held by the bridge before the chat was let go of: not added.
       db.captures.record(command);
       return null;
     }
+    const answered = command.quoted_id ? db.deliveries.captureAnswer(command.quoted_id) : null;
+    if (answered) return { answer: answerReply(command, answered) };
     const marked = command.marked !== false;
     const where = whereOf(command);
     const asked = await askClaude(command, settings);
@@ -357,7 +393,13 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, clock
         if (!db.captures.has(command.id)) {
           const item = await take(command, settings);
           if (item === LATER) continue;
-          if (item) {
+          if (item?.answer) {
+            try {
+              await scheduler.sendCalendarReply({ key: `capture:${command.id}`, ...item.answer });
+            } catch (err) {
+              log.warn({ message_id: command.id, err: err.message }, "📅 message: a reply's answer was not sent");
+            }
+          } else if (item && !("answer" in item)) {
             added++;
             log.info({ message_id: command.id, kind: item.kind }, "📅 message put on the calendar"); // never its text
             try {

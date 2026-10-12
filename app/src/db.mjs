@@ -541,6 +541,8 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
       q("UPDATE deliveries SET status = 'failed', error = ?, updated_at = ? WHERE key = ?").run(error, at, key),
     recent: (limit = 20) =>
       q("SELECT * FROM deliveries ORDER BY updated_at DESC, key LIMIT ?").all(limit).map(delivery),
+    /* The answer to a 📅 message that WhatsApp gave this id, or null. */
+    captureAnswer: (messageId) => delivery(q("SELECT * FROM deliveries WHERE message_id = ? AND kind = 'capture'").get(messageId)),
     /* History is kept for a year; older rows go. */
     prune: (beforeDay) => q("DELETE FROM deliveries WHERE day < ?").run(beforeDay).changes,
   };
@@ -717,6 +719,7 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
   /* 📅 messages taken from the bridge: each once. */
   const captures = {
     has: (messageId) => Boolean(q("SELECT 1 FROM captures WHERE message_id = ?").get(messageId)),
+    get: (messageId) => q("SELECT * FROM captures WHERE message_id = ?").get(messageId) ?? null,
     record: ({ id, chat_id: chatId, sent_at: sentAt, text, quoted }, kind = null, itemId = null) =>
       q("INSERT OR IGNORE INTO captures (message_id, chat_id, sent_at, text, quoted, kind, item_id) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
         id,
