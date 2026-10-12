@@ -180,3 +180,24 @@ test("paused, the calendar sends nothing — and Today still lists what it would
   assert.deepEqual(bridge.sent, []);
   assert.deepEqual(scheduler.agenda().map((job) => [job.kind, job.time, job.due]), [["agenda", "07:00", true], ["event", "09:00", false]]);
 });
+
+test("five reminders, each on its own days from the day it was set — and each goes when it is done reminding", async () => {
+  const { db, bridge, scheduler } = setup(); // Wed 30 Sep, 07:00
+  const reminder = (title, day) => db.events.create({ title, day, time: "07:00", remind: 0, reminder: true });
+  const third = reminder("Call Renjith", "2026-09-28"); // 28, 29, 30 …
+  const first = reminder("Pay the bill", "2026-09-30");
+  const seventh = reminder("Renew insurance", "2026-09-20"); // 20, 21, 22, 24, 26, 28, 30, 2 Oct
+  const second = reminder("Water plants", "2026-09-29");
+  reminder("Book tickets", "2026-09-25"); // 25, 26, 27, 29, 1 Oct: not today
+  const finished = reminder("Old one", "2026-09-10"); // its last day was 22 Sep
+
+  await scheduler.run();
+  const sent = new Map(bridge.sent.filter((s) => s.key.startsWith("event:")).map((s) => [s.key, s.text]));
+  assert.deepEqual([...sent.keys()].sort(), [third, first, seventh, second].map((id) => `event:${id}:2026-09-30:0`).sort(), "one message each, each from its own day");
+  assert.equal(sent.get(`event:${third}:2026-09-30:0`), "⏰ *Call Renjith*\nToday, 07:00 · reminder 3 of 8\nReply “done” when it is — else again Fri 2 Oct.");
+  assert.equal(sent.get(`event:${first}:2026-09-30:0`), "⏰ *Pay the bill*\nToday, 07:00 · reminder 1 of 8\nReply “done” when it is — else again tomorrow.");
+  assert.match(sent.get(`event:${seventh}:2026-09-30:0`), /reminder 7 of 8\nReply “done” when it is — else again Fri 2 Oct\.$/);
+  assert.match(sent.get(`event:${second}:2026-09-30:0`), /reminder 2 of 8/);
+  assert.equal(db.events.get(finished), null, "done reminding: off the calendar");
+  assert.ok(db.events.get(seventh), "still one to go");
+});

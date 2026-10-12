@@ -214,3 +214,33 @@ test("migration 7 keeps every message sent, alerts' text included, and adds the 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("migration 10: the reminders set before keep reminding, and old ✅s let go of ids used again", () => {
+  const dir = mkdtempSync(join(tmpdir(), "bdr-"));
+  try {
+    const file = join(dir, "birthdays.db");
+    firstVersionDb(file);
+    openDb(file).close();
+    // Back to version 9, as the live app had it: an event deleted, its id
+    // used again by a reminder; a "remind me" from before.
+    const raw = new DatabaseSync(file);
+    raw.exec(`
+      DROP TRIGGER events_forgotten; DROP TRIGGER tasks_forgotten; ALTER TABLE events DROP COLUMN reminder; PRAGMA user_version = 9;
+      INSERT INTO events (id, title, day, time, remind, created_at) VALUES (2, 'Call pembernotti', '2026-10-13', '07:00', 0, '2026-10-12T08:00:00Z');
+      INSERT INTO events (id, title, day, time, created_at) VALUES (3, 'Hospital', '2026-10-13', '10:00', '2026-10-08T17:09:05Z');
+      INSERT INTO captures (message_id, chat_id, sent_at, text, kind, item_id, created_at) VALUES
+        ('OLD', 'g', '2026-10-12T07:43:00Z', 'Doc wed 10 pm', 'event', 2, '2026-10-12T07:43:00Z'),
+        ('NEW', 'g', '2026-10-12T08:00:00Z', 'Remind me to call pembernotti', 'event', 2, '2026-10-12T08:00:00Z'),
+        ('HOS', 'self', '2026-10-08T17:09:05Z', 'tue 10am hospital', 'event', 3, '2026-10-08T17:09:05Z'),
+        ('GONE', 'self', '2026-10-01T00:00:00Z', 'Lunch', 'event', 9, '2026-10-01T00:00:00Z');`);
+    raw.close();
+    const db = openDb(file);
+    assert.deepEqual([db.events.get(2).reminder, db.events.get(3).reminder], [true, false]);
+    assert.deepEqual(["OLD", "NEW", "HOS", "GONE"].map((id) => db.captures.get(id).item_id), [null, 2, 3, null]);
+    db.events.remove(3);
+    assert.equal(db.captures.get("HOS").item_id, null, "deleted: forgotten");
+    db.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -3,7 +3,7 @@
  * to you — "Your day" each morning, and an event's reminder. WhatsApp
  * formatting applies: *bold*, _italic_, ~strike~. */
 
-import { timeRange } from "./calendar.mjs";
+import { REMINDER_DAYS, daysBetween, shiftDay, timeRange } from "./calendar.mjs";
 import { addDays, ageOn, formatShortDate, fromIsoDate, isoDate, ordinal } from "./dates.mjs";
 
 /* The occasions a row on the People page can be. */
@@ -147,7 +147,15 @@ export function renderAgenda({ date, today, tasks, tomorrow }) {
 export function renderEventReminder({ event, start, date }) {
   const when = dayWord(start, date);
   const lines = [`⏰ *${event.title}*`, `${when[0].toUpperCase()}${when.slice(1)}${timeRange(event) ? `, ${timeRange(event)}` : ", all day"}`];
-  if (event.notes.trim()) lines.push(quoted(event.notes));
+  if (event.reminder) {
+    // Which of its eight, and when the next — "done" in reply stops it.
+    const n = REMINDER_DAYS.indexOf(daysBetween(event.day, start));
+    const next = REMINDER_DAYS[n + 1];
+    lines[1] += ` · reminder ${n + 1} of ${REMINDER_DAYS.length}`;
+    lines.push(next === undefined ? "The last one — reply “done” if it is." : `Reply “done” when it is — else again ${dayWord(shiftDay(event.day, next), date)}.`);
+  } else if (event.notes.trim()) {
+    lines.push(quoted(event.notes));
+  }
   return lines.join("\n");
 }
 
