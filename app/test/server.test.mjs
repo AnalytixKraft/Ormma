@@ -555,3 +555,41 @@ test("Settings: where 📅 messages count, and the reminder new events start wit
   assert.deepEqual([db.settings.get().captureChats, db.settings.get().defaultRemind], [[], null], "nothing ticked: nowhere; no reminder");
   db.settings.save({ captureChats: ["self"], defaultRemind: 5 });
 });
+
+test("Settings: with Claude, a group can have every message count; without it, that waits for a key", async () => {
+  const cookie = await signIn();
+  const group = "120363000000000042@g.us";
+  db.settings.save({ captureChats: ["self", group], captureEvery: [] });
+  const without = await (await get("/settings", cookie)).text();
+  assert.match(without, /<input type="checkbox" disabled> <span>every message, no 📅<\/span>/);
+  assert.match(without, /Simple rules read them\. With <code>ANTHROPIC_API_KEY<\/code>/);
+
+  // The same app, with a Claude reader that reaches no one.
+  const scheduler = createScheduler({ db, bridge: fakeBridge, log: silentLog });
+  const claude = { model: "claude-haiku-5-5", read: async () => ({ kind: "none" }), status: () => ({ ok: false, error: "the API refused the request: not scoped", at: null }) };
+  const withClaude = await createApp({ config: { adminPassword: PASSWORD, sessionSecret: "s".repeat(40) }, db, bridge: fakeBridge, scheduler, log: silentLog, claude });
+  await new Promise((resolve) => withClaude.listen(0, "127.0.0.1", resolve));
+  try {
+    const at = `http://127.0.0.1:${withClaude.address().port}`;
+    const page = await (await fetch(`${at}/settings`, { headers: { cookie } })).text();
+    assert.match(page, new RegExp(`<input type="checkbox" name="captureEvery" value="${group}"> <span>every message, no 📅</span>`));
+    assert.match(page, /<strong>Claude reads them<\/strong> \(claude-haiku-5-5\)/);
+    assert.match(page, /Claude’s last call did not work, so simple rules read 📅 messages for now: the API refused the request: not scoped/);
+    const base = { wishTime: "08:00", reminderTime: "07:00", timezone: "Asia/Kolkata", daysAhead: "1", countryCode: "91", template: "", reminderTo: "", myPhone: "", alertTo: "self", calendarTo: "self", captureShown: "1", capture: "1", defaultRemind: "5" };
+    const saved = await fetch(`${at}/settings`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/x-www-form-urlencoded", "sec-fetch-site": "same-origin", cookie },
+      body: new URLSearchParams([...Object.entries(base), ["captureChat", "self"], ["captureEvery", group], ["captureEvery", "self"]]),
+    });
+    assert.equal(saved.status, 303);
+    assert.deepEqual([db.settings.get().captureChats, db.settings.get().captureEvery], [["self"], [group]], "every message: groups only");
+  } finally {
+    withClaude.close();
+  }
+  // Without a key again, a save keeps it as it was.
+  const kept = await post("/settings", { wishTime: "08:00", reminderTime: "07:00", timezone: "Asia/Kolkata", daysAhead: "1", countryCode: "91", template: "", reminderTo: "", myPhone: "", alertTo: "self", calendarTo: "self", captureShown: "1", capture: "1", captureChat: "self", captureEvery: group, defaultRemind: "5" }, { cookie });
+  assert.equal(kept.status, 303);
+  assert.deepEqual(db.settings.get().captureEvery, [group]);
+  db.settings.save({ captureChats: ["self"], captureEvery: [] });
+});

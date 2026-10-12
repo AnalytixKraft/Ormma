@@ -450,6 +450,7 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
     calendar_to: "self",
     capture: "1",
     capture_chats: "self",
+    capture_every: "",
     default_remind: "5",
     my_phone: "",
     country_code: "91",
@@ -472,12 +473,13 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
         calendarTo: values.calendar_to, // the same again: where "Your day" and event reminders go
         capture: values.capture === "1", // 📅 messages you send on WhatsApp go on the calendar
         captureChats: values.capture_chats.split(" ").filter(Boolean), // where they count: "self" and group ids
+        captureEvery: values.capture_every.split(" ").filter(Boolean), // groups where every message counts (Claude reads it)
         defaultRemind: values.default_remind === "" ? null : Number(values.default_remind), // minutes before; a new event's reminder
         myPhone: values.my_phone,
         countryCode: values.country_code,
       };
     },
-    save({ enabled, wishTime, reminderTime, timezone, daysAhead, template, anniversaryTemplate, reminderTo, alertTo, calendarTo, capture, captureChats, defaultRemind, myPhone, countryCode }) {
+    save({ enabled, wishTime, reminderTime, timezone, daysAhead, template, anniversaryTemplate, reminderTo, alertTo, calendarTo, capture, captureChats, captureEvery, defaultRemind, myPhone, countryCode }) {
       const upsert = q("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value");
       const values = {
         enabled: enabled === undefined ? undefined : enabled ? "1" : "0",
@@ -492,6 +494,7 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
         calendar_to: calendarTo,
         capture: capture === undefined ? undefined : capture ? "1" : "0",
         capture_chats: captureChats === undefined ? undefined : captureChats.join(" "),
+        capture_every: captureEvery === undefined ? undefined : captureEvery.join(" "),
         default_remind: defaultRemind === undefined ? undefined : defaultRemind === null ? "" : String(defaultRemind),
         my_phone: myPhone,
         country_code: countryCode,

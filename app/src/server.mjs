@@ -53,7 +53,7 @@ async function loadAssets() {
   };
 }
 
-export async function createApp({ config, problems = [], db, bridge, scheduler, log }) {
+export async function createApp({ config, problems = [], db, bridge, scheduler, log, claude = null }) {
   const assets = await loadAssets();
   const auth = problems.length ? null : createAuth({ password: config.adminPassword, secret: config.sessionSecret, store: db.password });
   const throttle = createThrottle();
@@ -145,7 +145,7 @@ export async function createApp({ config, problems = [], db, bridge, scheduler, 
     redirect(res, "/", { "set-cookie": serializeCookie(COOKIE, auth.issue(), { maxAge: MAX_AGE_S, secure: isHttps(req) }) });
   }
 
-  const shared = { db, bridge, scheduler, log, assets, auth, throttle, waStatus, knownGroups };
+  const shared = { db, bridge, scheduler, log, assets, auth, throttle, waStatus, knownGroups, claude };
   const routes = [...todayRoutes(shared), ...calendarRoutes(shared), ...notesRoutes(shared), ...peopleRoutes(shared), ...settingsRoutes(shared)];
 
   function serveStatic(res, name, url) {

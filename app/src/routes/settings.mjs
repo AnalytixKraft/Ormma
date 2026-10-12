@@ -18,7 +18,7 @@ function timeZones(current) {
   return zones.includes(current) ? zones : [current, ...zones];
 }
 
-export function settingsRoutes({ db, bridge, scheduler, log, assets, auth, throttle, waStatus, knownGroups }) {
+export function settingsRoutes({ db, bridge, scheduler, log, assets, auth, throttle, waStatus, knownGroups, claude }) {
   /* WhatsApp is a section of Settings now; old links still arrive. */
   const whatsapp = (ctx) => redirect(ctx.res, "/settings#whatsapp");
 
@@ -64,7 +64,7 @@ export function settingsRoutes({ db, bridge, scheduler, log, assets, auth, throt
   async function renderSettings(ctx, { status = 200, values, errors = {} }) {
     const wa = await waStatus();
     const { groups } = await knownGroups();
-    ctx.page(status, settingsPage({ values, errors, timeZones: timeZones(values.timezone), groups, wa, assets, flash: ctx.flash }));
+    ctx.page(status, settingsPage({ values, errors, timeZones: timeZones(values.timezone), groups, wa, claudeModel: claude?.model ?? null, claudeStatus: claude?.status() ?? null, assets, flash: ctx.flash }));
   }
 
   /* Settings → Password. The current one first, counted like a sign-in, so
@@ -131,6 +131,7 @@ export function settingsRoutes({ db, bridge, scheduler, log, assets, auth, throt
       calendarTo: form.has("calendarTo") ? form.get("calendarTo") : before.calendarTo,
       capture: form.has("captureShown") ? form.has("capture") : before.capture,
       captureChats: form.has("captureShown") ? [...new Set(form.all("captureChat"))].filter((c) => c === "self" || GROUP_JID.test(c)) : before.captureChats,
+      captureEvery: form.has("captureShown") ? [...new Set(form.all("captureEvery"))].filter((c) => GROUP_JID.test(c)) : before.captureEvery,
       defaultRemind: form.has("defaultRemind") ? (form.get("defaultRemind") === "" ? null : Number(form.get("defaultRemind"))) : before.defaultRemind,
       countryCode: form.get("countryCode").replace(/^\+/, ""),
     };

@@ -17,6 +17,10 @@ export function loadConfig(env = process.env) {
     adminPassword: (env.ADMIN_PASSWORD || "").trim(),
     sessionSecret: (env.SESSION_SECRET || "").trim(),
     defaultTimezone: (env.DEFAULT_TIMEZONE || "").trim() || "Asia/Kolkata",
+    // Optional: with it, Claude reads 📅 messages (claude.mjs). Never logged.
+    anthropicApiKey: (env.ANTHROPIC_API_KEY || "").trim(),
+    // For a key that belongs to no one workspace: which to use.
+    anthropicWorkspaceId: (env.ANTHROPIC_WORKSPACE_ID || "").trim(),
   };
   const problems = [];
   if (config.adminPassword.length < 8) problems.push("ADMIN_PASSWORD is missing or shorter than 8 characters.");

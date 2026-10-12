@@ -57,28 +57,43 @@ ${status?.last_error ? html`<p class="notice">${status.last_error}</p>` : ""}
 </section>`;
 }
 
-/* Where 📅 messages count: Message yourself, and the groups ticked. A group
- * chosen before that the number has since left stays listed, so a save does
- * not drop it unseen. */
-function capturePicks(chosen, groups) {
-  const on = new Set(chosen);
+/* Where 📅 messages count: Message yourself, and the groups ticked — and,
+ * with Claude, the groups where every message does. A group chosen before
+ * that the number has since left stays listed, so a save does not drop it
+ * unseen; so does "every message" while there is no API key. */
+function capturePicks({ captureChats, captureEvery }, groups, claudeModel, claudeStatus) {
+  const on = new Set(captureChats);
+  const every = new Set(captureEvery);
   const known = new Set(groups.map((g) => g.id));
-  const pick = (value, label, note = "") =>
-    html`<label class="check"><input type="checkbox" name="captureChat" value="${value}"${on.has(value) ? raw(" checked") : ""}> <span>${label}${note ? html` <span class="optional">${note}</span>` : ""}</span></label>`;
+  const checked = (yes) => (yes ? raw(" checked") : "");
+  const row = (value, label, note = "") => html`<div class="chat-pick">
+    <label class="check"><input type="checkbox" name="captureChat" value="${value}"${checked(on.has(value) || every.has(value))}> <span>${label}${note ? html` <span class="optional">${note}</span>` : ""}</span></label>
+    ${value === "self"
+      ? ""
+      : claudeModel
+        ? html`<label class="check chat-pick__every"><input type="checkbox" name="captureEvery" value="${value}"${checked(every.has(value))}> <span>every message, no 📅</span></label>`
+        : html`<label class="check chat-pick__every is-off" title="Needs ANTHROPIC_API_KEY in .env"><input type="checkbox" disabled${checked(every.has(value))}> <span>every message, no 📅</span></label>${every.has(value) ? html`<input type="hidden" name="captureEvery" value="${value}">` : ""}`}
+  </div>`;
   return html`<fieldset class="field chat-picks">
   <legend class="field__label">Where 📅 messages count</legend>
   <div class="chat-picks__list">
-    ${pick("self", "Message yourself", "the linked number’s own chat — only its own messages")}
-    ${groups.map((g) => pick(g.id, g.subject))}
-    ${[...on].filter((c) => c !== "self" && !known.has(c)).map((c) => pick(c, "A group the number has left, or not listed now"))}
+    ${row("self", "Message yourself", "the linked number’s own chat — only its own messages")}
+    ${groups.map((g) => row(g.id, g.subject))}
+    ${[...new Set([...on, ...every])].filter((c) => c !== "self" && !known.has(c)).map((c) => row(c, "A group the number has left, or not listed now"))}
   </div>
-  <span class="hint">In a group you tick, <strong>anyone in it</strong> can add to the calendar with a 📅 message — at most 30 an hour. Groups you don’t tick are not read at all.${groups.length ? "" : " Link WhatsApp to list your groups here."}</span>
+  <span class="hint">In a group you tick, <strong>anyone in it</strong> can add to the calendar — at most 30 messages an hour. Groups you don’t tick are not read at all.${groups.length ? "" : " Link WhatsApp to list your groups here."}</span>
+  <p class="hint claude-note">${claudeModel
+    ? html`<strong>Claude reads them</strong> (${claudeModel}): each message, and the one it replies to, go to Anthropic to be read — so <code>📅 dinner at Ravi’s next Friday after 8</code> works too. In a group with <em>every message, no 📅</em> ticked, Claude adds what is an event or a task and lets the rest go.`
+    : html`Simple rules read them. With <code>ANTHROPIC_API_KEY</code> in the .env file, Claude reads them — free-form wording too — and a group can have <em>every message</em> count, no 📅 needed.`}</p>
+  ${claudeStatus?.ok === false
+    ? html`<p class="notice">Claude’s last call did not work, so simple rules read 📅 messages for now: ${claudeStatus.error.slice(0, 400)}</p>`
+    : ""}
 </fieldset>`;
 }
 
 /* --------------------------------------------------------------- settings */
 
-export function settingsPage({ values, errors = {}, timeZones, groups, wa, assets, flash }) {
+export function settingsPage({ values, errors = {}, timeZones, groups, wa, claudeModel = null, claudeStatus = null, assets, flash }) {
   const invalid = (e) => (e ? raw(' aria-invalid="true"') : "");
   const error = (e) => (e ? html`<span class="field__error">${e}</span>` : "");
   return layout({
@@ -160,7 +175,7 @@ ${whatsappSection(wa)}
     </label>
     <input type="hidden" name="captureShown" value="1">
     <label class="check check--big"><input type="checkbox" name="capture" value="1"${values.capture ? raw(" checked") : ""}> <span><strong>Add to the calendar from WhatsApp</strong><br><span class="hint">A message that starts with 📅, in a chat ticked below, goes on the calendar: <code>📅 Dentist Tue 10am</code>, <code>📅 Trip 10-13 Oct</code>, <code>📅 task Pay rent by Fri</code> — or a reply of 📅 to a message, to add what it says. The answer goes where calendar messages go.</span></span></label>
-    ${capturePicks(values.captureChats, groups)}
+    ${capturePicks(values, groups, claudeModel, claudeStatus)}
   </fieldset>
 
   <fieldset class="settings-group" id="alerts">

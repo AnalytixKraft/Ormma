@@ -21,7 +21,7 @@ const message = ({ fromMe = true, chat = GROUP, text = "📅 Dentist Tue 10am", 
   pushName: name,
   message: content ?? { conversation: text },
 });
-const read = (fields, chats = chosen) => readMessage(message(fields), mine, chats, NOW);
+const read = (fields, chats = chosen, every = new Set()) => readMessage(message(fields), mine, chats, every, NOW);
 const command = (fields, chats) => read(fields, chats)?.command ?? null;
 
 test("a 📅 message in a chosen group — from anyone in it — or in Message yourself is held for the app", () => {
@@ -32,6 +32,7 @@ test("a 📅 message in a chosen group — from anyone in it — or in Message y
     sent_at: "2026-10-08T09:59:00.000Z",
     text: "Dentist Tue 10am",
     quoted: null,
+    marked: true,
     from_me: true,
     sender: null,
   });
@@ -54,7 +55,7 @@ test("nothing is taken from a chat not chosen, nor without the mark", () => {
   assert.equal(read({ text: "Dentist on Tue 10am" }), null, "no mark: nothing, not even in the log");
   assert.equal(read({ chat: "status@broadcast" }), null);
   assert.equal(read({ content: { reactionMessage: { text: "📅" } } }), null);
-  assert.equal(readMessage({ key: { fromMe: true, remoteJid: GROUP } }, mine, chosen, NOW), null, "no content");
+  assert.equal(readMessage({ key: { fromMe: true, remoteJid: GROUP } }, mine, chosen, new Set(), NOW), null, "no content");
 });
 
 test("a calendar emoji that does not make a 📅 message is said so in the log, without the message", () => {
@@ -62,6 +63,17 @@ test("a calendar emoji that does not make a 📅 message is said so in the log, 
   assert.deepEqual(read({ text: "🗓️ Dentist Tue 10am" }), { skipped: "it starts with 🗓️, which is not 📅 or 📆" });
   assert.deepEqual(read({ at: sent(3 * 24 * 60) }), { skipped: "it arrived more than 2 days after it was sent" });
   assert.equal(read({ chat: OTHER_GROUP, text: "Dentist 📅" }), null, "nor anything from a chat not chosen");
+});
+
+test("in a group where every message counts, each one with text is held — marked or not — and no other", () => {
+  const every = new Set([GROUP]);
+  const plain = read({ fromMe: false, name: "Spare", text: "Doctor tue 10 am" }, chosen, every)?.command;
+  assert.deepEqual([plain.text, plain.marked, plain.sender], ["Doctor tue 10 am", false, "Spare"]);
+  assert.equal(read({ text: "📅 Lunch 1pm" }, chosen, every).command.marked, true);
+  assert.equal(read({ text: "   " }, chosen, every), null, "no words");
+  assert.equal(read({ content: { stickerMessage: {} } }, chosen, every), null, "no text");
+  assert.equal(read({ chat: OTHER_GROUP, text: "Doctor tue 10 am" }, new Set(["self", OTHER_GROUP]), every), null, "only where every message counts");
+  assert.equal(read({ chat: ME, text: "Doctor tue 10 am" }, chosen, every), null, "Message yourself still needs the 📅");
 });
 
 test("a reply of 📅 carries the line it replies to; wrapped and captioned messages count", () => {

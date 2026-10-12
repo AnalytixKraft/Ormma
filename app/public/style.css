@@ -876,6 +876,11 @@ mark { background: var(--marigold-wash); color: inherit; border-radius: 3px; pad
   border-radius: 8px;
 }
 .chat-picks__list .check { margin: 0; padding: 4px 0; }
+.chat-pick { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 16px; }
+.chat-pick + .chat-pick { border-top: 1px solid var(--rule); }
+.chat-pick__every { font-size: 0.88rem; color: var(--ink-soft); }
+.chat-pick__every.is-off { opacity: 0.6; }
+.claude-note { margin-top: 4px; }
 
 .person-notes { margin-top: 20px; }
 .person-notes__list { margin: 0 0 14px; padding-left: 1.2em; }
