@@ -32,6 +32,7 @@ test("a 📅 message in a chosen group — from anyone in it — or in Message y
     sent_at: "2026-10-08T09:59:00.000Z",
     text: "Dentist Tue 10am",
     quoted: null,
+    quoted_id: null,
     marked: true,
     from_me: true,
     sender: null,
@@ -84,7 +85,13 @@ test("a reply of 📅 carries the line it replies to; wrapped and captioned mess
       },
     },
   });
-  assert.deepEqual([reply.text, reply.quoted], ["", "Choir moves to Sat 6pm"]);
+  assert.deepEqual([reply.text, reply.quoted, reply.quoted_id], ["", "Choir moves to Sat 6pm", null]);
+  const toTheApp = command({
+    chat: GROUP,
+    fromMe: false,
+    content: { extendedTextMessage: { text: "📅 delete", contextInfo: { stanzaId: "3EB0ADDED", quotedMessage: { conversation: "✅ Added to the calendar: *Doc*" } } } },
+  });
+  assert.deepEqual([toTheApp.text, toTheApp.quoted_id], ["delete", "3EB0ADDED"], "which message it replies to, so the app can find it");
   assert.equal(command({ content: { imageMessage: { caption: "📅 Concert 12 Dec 7pm" } } }).text, "Concert 12 Dec 7pm");
   assert.equal(command({ text: `📅 ${"x".repeat(5000)}` }).text.length, 2000);
 });

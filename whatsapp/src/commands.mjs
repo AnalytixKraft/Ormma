@@ -28,7 +28,9 @@
  *
  * Its text, and the text of the message it replies to — so a reply of just
  * 📅 to someone's "Choir moves to Sat 6pm" carries that line — goes to the
- * app and nowhere else: never into the log.
+ * app and nowhere else: never into the log. So does the id of the message
+ * it replies to: a reply of "delete" to the app's own "✅ Added …" takes
+ * that event off the calendar.
  *
  * The bridge's own messages (the morning "🗓️ Your day", alerts…) never come
  * back here: the socket is made with emitOwnEvents off (session.mjs). And
@@ -97,7 +99,8 @@ export function readMessage(msg, mine, chats, every = new Set(), now = Date.now(
   const sentAt = toNumber(msg.messageTimestamp) * 1000;
   if (!Number.isFinite(sentAt) || sentAt <= 0) return null;
   if (now - sentAt > MAX_AGE_MS) return { skipped: "it arrived more than 2 days after it was sent" };
-  const quoted = contextOf(msg.message)?.quotedMessage;
+  const context = contextOf(msg.message);
+  const quoted = context?.quotedMessage;
   const quotedText = quoted ? textOf(quoted) : null;
   return {
     command: {
@@ -107,6 +110,7 @@ export function readMessage(msg, mine, chats, every = new Set(), now = Date.now(
       sent_at: new Date(sentAt).toISOString(),
       text: clip(text.replace(MARK, "").trim()),
       quoted: quotedText?.trim() ? clip(quotedText.trim()) : null,
+      quoted_id: typeof context?.stanzaId === "string" && context.stanzaId ? context.stanzaId.slice(0, 128) : null,
       marked,
       from_me: fromMe,
       sender: fromMe ? null : nameOf(msg.pushName),

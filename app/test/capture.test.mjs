@@ -288,3 +288,43 @@ test("a call Claude refuses pauses it for an hour — no asking again every poll
   assert.equal(await muddled.capture.poll(), 0);
   assert.deepEqual([muddled.bridge.acked, muddled.bridge.sent], [["C"], []]);
 });
+
+test("a reply of “delete” to the app's own ✅ takes that off the calendar again — and nothing else is read as new", async () => {
+  const claude = fakeClaude({ "Dentist Tue 10am": { kind: "event", title: "Dentist", day: "2026-10-13", endDay: null, time: "10:00", endTime: "" }, "Buy batteries": { kind: "task", title: "Buy batteries", due: null } });
+  const { db, bridge, capture } = setup([command("A", "Dentist Tue 10am"), command("T", "Buy batteries")], { captureEvery: [FAMILY], calendarTo: FAMILY }, claude);
+  await capture.poll();
+  const [dentistAnswer, batteriesAnswer] = bridge.sent.map((s) => db.deliveries.get(s.key).message_id);
+  assert.equal(db.events.count(), 1);
+
+  const reply = (id, text, to) => inFamily(id, text, { marked: false, quoted_id: to, quoted: "✅ Added to the calendar: *Dentist*" });
+  bridge.held = [reply("B", "delete", dentistAnswer), reply("X", "❌", batteriesAnswer)];
+  assert.equal(await capture.poll(), 0, "nothing added");
+  assert.equal(db.events.count(), 0);
+  assert.deepEqual(db.tasks.open(), []);
+  assert.deepEqual(bridge.sent.slice(2).map((s) => [s.key, s.chatId, s.text]), [
+    ["capture:B", FAMILY, "🗑️ Deleted: *Dentist* — Tue 13 Oct, 10:00"],
+    ["capture:X", FAMILY, "🗑️ Deleted the task: *Buy batteries*"],
+  ]);
+  assert.deepEqual(claude.asked, ["A", "T"], "Claude is not asked about a reply to the app");
+
+  bridge.held = [reply("C", "Delete", dentistAnswer), reply("D", "make it 11am", dentistAnswer)];
+  await capture.poll();
+  assert.deepEqual(bridge.sent.slice(4).map((s) => s.text), [
+    "*Dentist* was deleted already.",
+    "Only “delete” works as a reply to that. To change *Dentist*, open Wish Calendar → Calendar.",
+  ]);
+  assert.equal(db.events.count(), 0, "and nothing new added");
+
+  // A reply to the app's answer to a reply: nothing to delete, no answer.
+  bridge.held = [reply("E", "delete", db.deliveries.get("capture:B").message_id)];
+  await capture.poll();
+  assert.equal(bridge.sent.length, 6);
+  assert.deepEqual(bridge.acked.slice(-1), ["E"]);
+});
+
+test("“delete” that answers no message of the app's is read like any other", async () => {
+  const claude = fakeClaude({ delete: { kind: "none" } });
+  const { db, bridge, capture } = setup([inFamily("A", "delete", { marked: false, quoted_id: "someone-elses-message" })], { captureEvery: [FAMILY] }, claude);
+  assert.equal(await capture.poll(), 0);
+  assert.deepEqual([claude.asked, bridge.sent, db.events.count()], [["A"], [], 0]);
+});
