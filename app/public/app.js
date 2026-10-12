@@ -42,6 +42,14 @@ for (const form of document.querySelectorAll("form[data-unsaved]")) {
   });
 }
 
+// Calendar, on a phone: the year's thumb index is a strip that scrolls, and
+// it starts with the month that is open in view.
+const months = document.querySelector(".months");
+const thisMonth = months?.querySelector("[aria-current]");
+if (months && thisMonth && months.scrollWidth > months.clientWidth) {
+  months.scrollLeft = thisMonth.offsetLeft - (months.clientWidth - thisMonth.offsetWidth) / 2;
+}
+
 // People: filter the table by name as you type.
 for (const input of document.querySelectorAll("[data-filter]")) {
   const table = document.getElementById(input.dataset.filter);

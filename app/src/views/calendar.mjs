@@ -178,6 +178,10 @@ export function calendarPage({ month, prev, next, today, selected, weeks, open, 
       <thead><tr>${WEEKDAYS.map((w, i) => html`<th scope="col"${i === 0 ? raw(' class="is-sunday"') : ""}><abbr title="${w}">${w.slice(0, 3)}</abbr></th>`)}</tr></thead>
       <tbody>${weeks.map((week) => html`<tr>${week.map((d) => dayCell(d, { month, today, selected }))}</tr>`)}</tbody>
     </table>
+    <nav class="months" aria-label="The months of ${month.year}">${MONTHS.map((m, i) => {
+      const current = i + 1 === month.month;
+      return html`<a href="/calendar?month=${monthKey({ year: month.year, month: i + 1 })}"${current ? raw(' aria-current="true"') : ""}>${m.slice(0, 3)}<span class="visually-hidden">${m.slice(3)} ${month.year}</span></a>`;
+    })}</nav>
   </div>
   <div class="cal-side">
     ${selectedDay ? dayPanel(selectedDay, { today, back }) : ""}

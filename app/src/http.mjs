@@ -7,7 +7,7 @@ import { BridgeError } from "./bridge.mjs";
  * the page works offline, and an injected <script> has nowhere to run. */
 export const SECURITY_HEADERS = {
   "content-security-policy":
-    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; " +
+    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; " +
     "form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
   "x-content-type-options": "nosniff",
   "x-frame-options": "DENY",

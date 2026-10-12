@@ -4,7 +4,7 @@
 import { MONTHS, WEEKDAYS, addDays, formatShortDate, fromIsoDate, isoDate, weekdayOf } from "../dates.mjs";
 import { MAX_BODY, MAX_TITLE, TAG_PATTERN, URL_PATTERN, normalizeTag, trimUrl } from "../notes.mjs";
 import { escape, formatMarks, html, plural, raw } from "./html.mjs";
-import { clockTime, iconOf, layout, leaf } from "./layout.mjs";
+import { clockTime, dayHeader, iconOf, layout } from "./layout.mjs";
 
 const tagHref = (tag) => `/notes?tag=${encodeURIComponent(tag)}`;
 
@@ -230,7 +230,7 @@ export function journalPage({ date, today, page, recent, people, timeZone, asset
   </nav>
 </header>
 <div class="journal">
-  <div class="journal__leaf">${leaf({ date, size: "small", people, heading: "h2" })}</div>
+  <div class="journal__day">${dayHeader({ date, size: "small", people, heading: "h2" })}</div>
   <form method="post" action="/journal/${day}" class="card form journal__page" data-unsaved>
     <label class="visually-hidden" for="journal-body">The page for ${longDate(date)}</label>
     <textarea id="journal-body" name="body" rows="16" maxlength="${MAX_BODY}" class="ruled"${isToday && !page ? raw(" autofocus") : ""} placeholder="${isToday ? "How is today going?" : "Nothing written on this day."}">${page?.body ?? ""}</textarea>

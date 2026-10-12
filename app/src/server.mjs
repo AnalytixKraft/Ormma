@@ -34,14 +34,20 @@ import { errorPage, notConfiguredPage, signInPage } from "./views/layout.mjs";
 
 const PUBLIC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "public");
 const FLASH = "bdr_flash";
-const STATIC_TYPES = { css: "text/css; charset=utf-8", js: "text/javascript; charset=utf-8", svg: "image/svg+xml" };
+const STATIC_TYPES = {
+  css: "text/css; charset=utf-8",
+  js: "text/javascript; charset=utf-8",
+  svg: "image/svg+xml",
+  png: "image/png",
+  webmanifest: "application/manifest+json",
+};
 
-/* The stylesheet, script and icon, read once and addressed by a hash of
+/* The stylesheet, script and icons, read once and addressed by a hash of
  * their content, so a browser can cache them for good and still never run
  * an old copy after an upgrade. */
 async function loadAssets() {
   const files = new Map();
-  for (const name of ["style.css", "app.js", "favicon.svg"]) {
+  for (const name of ["style.css", "app.js", "favicon.svg", "apple-touch-icon.png", "icon-512.png", "manifest.webmanifest"]) {
     const body = await readFile(join(PUBLIC_DIR, name));
     const hash = createHash("sha256").update(body).digest("hex").slice(0, 12);
     files.set(name, { body, hash, type: STATIC_TYPES[name.split(".").pop()] });

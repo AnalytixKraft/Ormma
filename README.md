@@ -312,7 +312,9 @@ The Today page lists each of the day's messages and where it stands; a message W
 cd app && npm ci && npm test
 ```
 
-The app is plain Node 24 (`node:http`, `node:sqlite`, `node:test`), with one dependency to draw the QR code. The pages are rendered on the server; `app/public/app.js` only adds confirmations, the list filter, reading an uploaded file, the live wish preview, QR refresh, and the notebook's ⌘ + Enter and unsaved-writing warning. Each area's handlers are in `app/src/routes/`, its pages in `app/src/views/`. Every page but sign-in needs the session cookie, every form post must come from the app's own pages, and the Content-Security-Policy allows no inline script and nothing from other sites.
+The app is plain Node 24 (`node:http`, `node:sqlite`, `node:test`), with one dependency to draw the QR code. The pages are rendered on the server; `app/public/app.js` only adds confirmations, the list filter, reading an uploaded file, the live wish preview, QR refresh, the notebook's ⌘ + Enter and unsaved-writing warning, and the calendar's month strip on a phone. Each area's handlers are in `app/src/routes/`, its pages in `app/src/views/`.
+
+The pages are drawn as a bound diary — the green cover with the gold stamp, the ribbon that marks the open section, the day printed as a diary prints it — in `app/public/style.css`, with no web fonts: Superclarendon, Charter, Gill Sans and Malayalam MN ship with macOS and iOS, and elsewhere the stacks fall back. The icon, `app/public/favicon.svg`, is the Malayalam ഓ as outlines (taken from Malayalam MN with CoreText) on a diary cover; `apple-touch-icon.png` and `icon-512.png` are rendered from it on a Mac with `qlmanage -t -s 1024` and `sips`. Every page but sign-in needs the session cookie, every form post must come from the app's own pages, and the Content-Security-Policy allows no inline script and nothing from other sites.
 
 Test anything that sends against a fake bridge, never a linked one: the tests' fakes in `app/test/`, or the app run outside Docker with `BRIDGE_URL` pointing at a stub:
 
