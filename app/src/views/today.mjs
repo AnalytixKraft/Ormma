@@ -1,10 +1,12 @@
-/* Today: the day's leaf, what goes out today and how it went, and what is
- * coming up. */
+/* Today: the diary open at its page. The left-hand page is the day — the
+ * date as the diary prints it, the people to remember, what the calendar
+ * holds, and the messages going out; the right-hand page is for writing,
+ * and what is coming up. */
 
 import { STATE_LABELS } from "../bridge.mjs";
 import { alertSummary } from "../messages.mjs";
 import { html, plural } from "./html.mjs";
-import { clockTime, iconOf, layout, leaf, phoneOf } from "./layout.mjs";
+import { clockTime, dayHeader, iconOf, layout, phoneOf } from "./layout.mjs";
 import { yourDayCard } from "./calendar.mjs";
 import { journalCard } from "./notes.mjs";
 
@@ -103,12 +105,10 @@ export function todayPage({ today, settings, reminderLabel, alertLabel, wa, agen
     assets,
     flash,
     body: html`<h1 class="visually-hidden">Today</h1>
-<div class="today">
-  <section class="today__leaf" aria-label="Today’s birthdays and anniversaries">
-    ${leaf({ date: today, size: "large", people: todays, heading: "h2" })}
-  </section>
+<div class="spread">
+  <div class="spread__left">
+    ${dayHeader({ date: today, size: "large", people: todays, heading: "h2" })}
 
-  <div class="today__side">
     ${setupDone
       ? ""
       : html`<section class="card setup">
@@ -120,23 +120,14 @@ export function todayPage({ today, settings, reminderLabel, alertLabel, wa, agen
 
     ${yourDayCard({ date: today, ...yourDay })}
 
-    ${journalCard({ date: today, page: journal })}
-
-    <section class="card">
-      <h2 class="eyebrow">WhatsApp</h2>
+    <section class="card" aria-labelledby="messages-title">
+      <h2 id="messages-title">Messages</h2>
       ${waSummary(wa)}
-      <h2 class="eyebrow">Sending</h2>
       ${settings.enabled
-        ? html`<p class="status"><span class="dot dot--ok" aria-hidden="true"></span><span class="status__text">On — wishes at ${settings.wishTime}, ${reminderLabel ? `your reminder at ${settings.reminderTime} to ${reminderLabel}` : "no reminder"}, ${alertLabel ? `alerts to ${alertLabel}` : "no alerts"} <span class="muted">(${settings.timezone})</span></span></p>`
+        ? html`<p class="status"><span class="dot dot--ok" aria-hidden="true"></span><span class="status__text">Sending is on — wishes at ${settings.wishTime}, ${reminderLabel ? `your reminder at ${settings.reminderTime} to ${reminderLabel}` : "no reminder"}, ${alertLabel ? `alerts to ${alertLabel}` : "no alerts"} <span class="muted">(${settings.timezone})</span></span></p>`
         : html`<p class="status"><span class="dot dot--off" aria-hidden="true"></span><span class="status__text">Paused — nothing goes out on its own. <a href="/settings">Turn sending on</a></span></p>`}
       ${last.waiting ? html`<p class="notice">Messages are waiting: ${last.waiting}</p>` : ""}
-      <form method="post" action="/run" class="inline-form" data-confirm="Send every message for today that has not gone out yet, now?">
-        <button type="submit" class="button">Send today’s messages now</button>
-      </form>
-    </section>
-
-    <section class="card">
-      <h2>Today’s messages</h2>
+      <h3>Today’s messages</h3>
       ${agenda.length
         ? html`<ul class="jobs">${agenda.map(
             (job) => html`<li class="job job--${!job.to ? "failed" : job.delivery?.status || "due"}">
@@ -148,19 +139,31 @@ export function todayPage({ today, settings, reminderLabel, alertLabel, wa, agen
         </li>`,
           )}</ul>`
         : html`<p class="empty">Nothing to send today — no birthdays, and nothing on the calendar${reminderLabel ? " or for the reminder to mention" : ""}.</p>`}
+      <form method="post" action="/run" class="inline-form" data-confirm="Send every message for today that has not gone out yet, now?">
+        <button type="submit" class="button button--quiet button--small">Send today’s messages now</button>
+      </form>
+    </section>
+  </div>
+
+  <div class="spread__right">
+    ${journalCard({ date: today, page: journal })}
+
+    <section class="card upcoming" aria-labelledby="upcoming-title">
+      <h2 id="upcoming-title">Coming up <span class="muted">· next 30 days</span></h2>
+      ${later.size
+        ? html`<ol class="upcoming__list">${[...later.values()].map((d) => {
+            const when = d.inDays === 1 ? "Tomorrow" : `In ${d.inDays} days`;
+            return html`<li>${dayHeader({ date: d.date, size: "small", caption: when })}<div>
+      <p class="upcoming__when" aria-hidden="true">${when}</p>
+      <ul class="upcoming__names">${d.people.map(
+        (p) => html`<li><span aria-hidden="true">${iconOf(p.kind)}</span> ${p.name}<span class="visually-hidden">, ${p.kind}</span></li>`,
+      )}</ul>
+    </div></li>`;
+          })}</ol>`
+        : html`<p class="empty">No birthdays or anniversaries in the next 30 days.${counts.people === 0 ? html` <a href="/people/import">Upload your list</a>` : ""}</p>`}
     </section>
   </div>
 </div>
-
-<section class="upcoming" aria-labelledby="upcoming-title">
-  <h2 id="upcoming-title">Coming up <span class="muted">· next 30 days</span></h2>
-  ${later.size
-    ? html`<ol class="leaves">${[...later.values()].map((d) => {
-        const when = d.inDays === 1 ? "Tomorrow" : `In ${d.inDays} days`;
-        return html`<li>${leaf({ date: d.date, size: "small", people: d.people, caption: when })}<p class="leaves__when" aria-hidden="true">${when}</p></li>`;
-      })}</ol>`
-    : html`<p class="empty">No birthdays in the next 30 days.${counts.people === 0 ? html` <a href="/people/import">Upload your list</a>` : ""}</p>`}
-</section>
 
 <section class="card">
   <h2>Recent messages</h2>

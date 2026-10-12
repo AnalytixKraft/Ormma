@@ -1,57 +1,73 @@
-/* Ormma — a tear-off wall calendar.
+/* Ormma — a bound diary.
  *
- * The page is the calendar board; today is the paper leaf on it, its numeral
- * printed in indigo (red on Sundays, as Indian calendars print them), the
- * names written on it in ballpoint. Everything else stays quiet around that.
- * No web fonts: the stacks below use what each system already has. */
+ * The cover is the strip of green cloth across the top, stamped in gold;
+ * the ribbon sewn into it lies on the page under the section that is open;
+ * the page is the paper below, ruled where you write. Dates are printed the
+ * way a diary prints them: the numeral in a Clarendon, the day in two
+ * scripts, the day of the year counted off. Sundays in red, as every
+ * calendar in Kerala prints them.
+ *
+ * No web fonts: Superclarendon, Charter, Gill Sans and Malayalam MN ship
+ * with macOS and iOS; elsewhere the stacks fall back to what is there. */
 
 :root {
-  --board: #e5e8f1;       /* the backing board */
-  --paper: #ffffff;       /* a leaf, a card */
-  --ink: #1b2040;         /* printing ink */
-  --ink-soft: #5b6082;
-  --rule: #d3d7e5;
-  --binding: #1b2040;     /* the calendar's top strip, and the masthead */
-  --sunday: #c81e2c;
-  --marigold: #f0a20b;
-  --marigold-wash: #fdf2d8;
-  --ballpoint: #2146a7;
-  --sent: #1d7345;
-  --danger: #b3261e;
-  --button: #1b2040;
-  --button-text: #ffffff;
-  --bubble: #d9fdd3;      /* WhatsApp's own outgoing bubble */
+  --ground: #0b2a20;        /* the inside of the cover, behind the page */
+  --cover: #123b2e;         /* green cloth */
+  --cover-deep: #081f17;
+  --page: #fbfaf4;          /* diary paper */
+  --page-shade: #f0ede3;    /* a panel printed on it */
+  --ink: #1f2420;
+  --ink-soft: #5f6a63;
+  --rule: #dde2ea;          /* the printed rules: blue, as bank diaries rule them */
+  --rule-strong: #bcc6d4;
+  --ribbon: #b8222b;
+  --foil: #cba24b;          /* gold, on the cover */
+  --foil-ink: #7f6420;      /* gold, dark enough to read on the page */
+  --pen: #1f4fa3;           /* ballpoint: what is written in by hand */
+  --sent: #1f7a4a;
+  --danger: #b8222b;
+  --button: #123b2e;
+  --button-text: #f3eedf;
+  --button-hover: #1a4d3c;
+  --bubble: #d9fdd3;        /* WhatsApp's own outgoing bubble */
   --bubble-text: #111b21;
 
-  --font-display: "DIN Condensed", "Bahnschrift", "Avenir Next Condensed", "Roboto Condensed", "Arial Narrow", sans-serif;
-  --font-body: "Avenir Next", Avenir, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-hand: Noteworthy, "Bradley Hand", "Segoe Print", "Chalkboard SE", cursive;
+  --font-display: "Superclarendon", "Clarendon", "Rockwell", Georgia, serif;
+  --font-body: "Charter", "Iowan Old Style", "Palatino", Georgia, serif;
+  --font-ui: "Gill Sans", "Gill Sans MT", "Optima", "Avenir Next", "Segoe UI", sans-serif;
+  --font-hand: "Noteworthy", "Bradley Hand", "Segoe Print", "Chalkboard SE", cursive;
+  --font-ml: "Malayalam MN", "Malayalam Sangam MN", "Noto Sans Malayalam", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --radius: 10px;
-  --lift: 0 1px 0 rgb(27 32 64 / 0.05), 0 10px 28px -14px rgb(27 32 64 / 0.35);
+  --radius: 4px;
+  --page-shadow: 0 1px 0 rgb(0 0 0 / 0.25), 0 24px 48px -24px rgb(0 0 0 / 0.6);
+  --ribbon-length: 54px;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --board: #0f1227;
-    --paper: #191e3c;
-    --ink: #eceef8;
-    --ink-soft: #a4a9c8;
-    --rule: #2c3257;
-    --binding: #070918;
-    --sunday: #ff6b6b;
-    --marigold: #f5b84a;
-    --marigold-wash: #332b14;
-    --ballpoint: #9db7ff;
-    --sent: #5ccb8f;
-    --danger: #ff7a70;
-    --button: #f5b84a;
-    --button-text: #151936;
+    --ground: #06110d;
+    --cover: #0f3327;
+    --cover-deep: #071a13;
+    --page: #151f1a;
+    --page-shade: #1d2a24;
+    --ink: #ece7da;
+    --ink-soft: #a6b0a8;
+    --rule: #28372f;
+    --rule-strong: #3b5044;
+    --ribbon: #d9484f;
+    --foil: #d6b35a;
+    --foil-ink: #d6b35a;
+    --pen: #8fb0f5;
+    --sent: #5fcf8e;
+    --danger: #f06a6a;
+    --button: #d6b35a;
+    --button-text: #151f1a;
+    --button-hover: #e3c46e;
     --bubble: #005c4b;
     --bubble-text: #e9edef;
-    --lift: 0 1px 0 rgb(0 0 0 / 0.3), 0 12px 30px -14px rgb(0 0 0 / 0.7);
+    --page-shadow: 0 1px 0 rgb(0 0 0 / 0.5), 0 24px 48px -24px rgb(0 0 0 / 0.9);
     color-scheme: dark;
   }
 }
@@ -65,28 +81,37 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  background: var(--board);
+  background: var(--ground);
   color: var(--ink);
-  font: 400 1rem/1.55 var(--font-body);
+  font: 400 1.04rem/1.6 var(--font-body);
   -webkit-font-smoothing: antialiased;
 }
 
-a { color: var(--ballpoint); text-underline-offset: 0.18em; }
+a { color: var(--pen); text-underline-offset: 0.16em; text-decoration-thickness: 1px; }
 a:hover { text-decoration-thickness: 2px; }
 
-:focus-visible { outline: 3px solid var(--marigold); outline-offset: 2px; border-radius: 4px; }
+:focus-visible { outline: 2.5px solid var(--pen); outline-offset: 2px; border-radius: 3px; }
 
-code, pre { font-family: var(--font-mono); font-size: 0.88em; }
+code, pre { font-family: var(--font-mono); font-size: 0.86em; }
 
-h1, h2, h3 { line-height: 1.2; margin: 0 0 0.6em; }
-h1 {
-  font: 700 2.4rem/1 var(--font-display);
-  font-stretch: condensed;
-  letter-spacing: 0.02em;
+/* The type scale. Headings are set in the Clarendon the dates use; the
+ * small labels that organise a page — eyebrows, legends, table heads — in
+ * Gill Sans, tracked and capitalised, as a printed form labels its boxes. */
+h1, h2, h3 { margin: 0 0 0.6em; }
+h1 { font: 400 2.15rem/1.1 var(--font-display); letter-spacing: -0.01em; margin-bottom: 0.35em; }
+h2 { font: 400 1.28rem/1.25 var(--font-display); }
+h3,
+.eyebrow,
+.settings-title,
+.settings-group legend {
+  font: 600 0.74rem/1.2 var(--font-ui);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  margin-bottom: 0.4em;
+  color: var(--ink-soft);
 }
-h2 { font-size: 1.1rem; font-weight: 650; }
+h3 { margin: 0 0 0.6em; }
+.eyebrow { margin: 0 0 8px; }
+.eyebrow ~ .eyebrow { margin-top: 18px; }
 
 p { margin: 0 0 0.8em; }
 
@@ -101,83 +126,121 @@ p { margin: 0 0 0.8em; }
 .nowrap { white-space: nowrap; }
 .optional { color: var(--ink-soft); font-weight: 400; font-size: 0.85em; margin-left: 0.3em; }
 
-/* ------------------------------------------------------------ masthead */
+/* ------------------------------------------------------------- the cover */
 
-.masthead {
+.cover {
+  position: relative;
+  z-index: 2;
   display: flex;
-  align-items: center;
-  gap: 8px 28px;
-  padding: 12px max(20px, calc((100vw - 1080px) / 2 + 20px));
-  background: var(--binding);
-  color: #fff;
+  align-items: stretch;
+  gap: 0 28px;
+  min-height: 62px;
+  padding: 0 max(20px, calc((100vw - 1120px) / 2 + 20px));
+  background: var(--cover);
+  color: var(--foil);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 3px 0 var(--cover-deep);
+}
+/* The weave of the cloth. */
+.cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.03) 0 1px, transparent 1px 4px);
+  pointer-events: none;
 }
 
 .brand {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  color: #fff;
+  gap: 11px;
+  color: var(--foil);
   text-decoration: none;
-  font: 700 1.35rem/1 var(--font-display);
-  font-stretch: condensed;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 .brand:hover { text-decoration: none; }
+.brand__mark { width: 30px; height: 30px; flex: none; }
+.brand__text { display: flex; align-items: baseline; gap: 9px; }
+.brand__name { font: 400 1.5rem/1 var(--font-ml); letter-spacing: 0.01em; }
+.brand__latin { font: 500 0.68rem/1 var(--font-ui); letter-spacing: 0.24em; text-transform: uppercase; opacity: 0.78; }
 
-/* A tiny leaf: red strip, white page. */
-.brand__mark {
-  width: 16px;
-  height: 18px;
-  border-radius: 3px;
-  background: linear-gradient(var(--sunday) 0 5px, #fff 5px);
-}
-
-.nav { display: flex; gap: 4px; flex: 1; }
+.nav { display: flex; flex: 1; gap: 2px; min-width: 0; }
 .nav a {
-  color: rgb(255 255 255 / 0.72);
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 13px;
+  color: rgb(243 238 223 / 0.76);
   text-decoration: none;
-  padding: 7px 11px;
-  border-radius: 7px;
-  font-weight: 550;
+  font: 500 0.86rem/1 var(--font-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
-.nav a:hover { color: #fff; background: rgb(255 255 255 / 0.08); }
-.nav a[aria-current="page"] { color: #fff; box-shadow: inset 0 -3px 0 var(--marigold); border-radius: 7px 7px 0 0; }
+.nav a:hover { color: #fff; text-decoration: none; }
+.nav a[aria-current="page"] { color: var(--foil); }
 
-.masthead__signout { margin: 0; }
-.masthead .linkish { color: rgb(255 255 255 / 0.72); }
+/* The ribbon. Sewn into the cover, it lies on the page under the section
+ * that is open — the one thing that moves when a page is turned. */
+.nav a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 14px;
+  height: var(--ribbon-length);
+  margin-left: -7px;
+  background: linear-gradient(90deg, #9a1b23 0, var(--ribbon) 35%, #cf3640 65%, #8f1820 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 9px), 0 100%);
+  transform-origin: top center;
+  animation: ribbon-drop 560ms cubic-bezier(0.2, 0.85, 0.25, 1) both;
+}
+@keyframes ribbon-drop {
+  from { transform: scaleY(0.2); opacity: 0; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+.cover__signout { display: flex; align-items: center; margin: 0; }
+.cover .linkish { color: rgb(243 238 223 / 0.7); font: 500 0.78rem/1 var(--font-ui); letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; }
+.cover .linkish:hover { color: #fff; }
 
 .linkish {
   background: none;
   border: 0;
   padding: 0;
   font: inherit;
-  color: var(--ballpoint);
+  color: var(--pen);
   text-decoration: underline;
-  text-underline-offset: 0.18em;
+  text-underline-offset: 0.16em;
   cursor: pointer;
 }
 
 @media (max-width: 760px) {
-  .masthead { flex-wrap: wrap; }
+  .cover { flex-wrap: wrap; row-gap: 0; padding-top: 10px; }
   .brand { flex: 1; }
-  .nav { order: 3; flex-basis: 100%; overflow-x: auto; scrollbar-width: none; margin: 0 -8px; }
-  .nav::-webkit-scrollbar { display: none; }
-}
-/* Five places to go: on a phone they still fit on one line. */
-@media (max-width: 480px) {
-  .nav { gap: 0; }
-  .nav a { padding: 7px 7px; font-size: 0.94rem; }
+  .brand__name { font-size: 1.35rem; }
+  .nav { order: 3; flex-basis: 100%; justify-content: space-between; gap: 0; }
+  .nav a { padding: 12px 4px 10px; font-size: 0.78rem; letter-spacing: 0.08em; }
+  :root { --ribbon-length: 40px; }
 }
 
-/* ---------------------------------------------------------------- page */
+/* --------------------------------------------------------------- the page */
 
-.page { max-width: 1080px; margin: 0 auto; padding: 28px 20px 72px; }
-.page--bare { padding-top: 8vh; }
-/* The calendar's month wants the room. */
-.page--wide { max-width: 1320px; }
+.page {
+  position: relative;
+  max-width: 1120px;
+  margin: 26px auto 60px;
+  padding: calc(var(--ribbon-length) + 10px) 44px 64px;
+  background: var(--page);
+  border-radius: 3px;
+  box-shadow: var(--page-shadow);
+}
+.page--wide { max-width: 1360px; }
+.page--bare { background: transparent; box-shadow: none; padding-top: 8vh; }
+
+@media (max-width: 760px) {
+  .page { margin: 0; border-radius: 0; padding: calc(var(--ribbon-length) + 8px) 18px 56px; }
+}
 
 .page-head {
   display: flex;
@@ -185,65 +248,58 @@ p { margin: 0 0 0.8em; }
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px 24px;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
-.page-head h1 { margin-bottom: 0.25em; }
-.page-head__actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.lede { color: var(--ink-soft); max-width: 62ch; margin: 0; }
+.page-head h1 { margin-bottom: 0.2em; }
+.page-head__actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.lede { color: var(--ink-soft); font-style: italic; max-width: 62ch; margin: 0; }
 
-.crumbs { margin: 0 0 6px; font-weight: 550; }
+.crumbs { margin: 0 0 10px; font: 500 0.76rem/1 var(--font-ui); letter-spacing: 0.12em; text-transform: uppercase; }
+.crumbs a { text-decoration: none; color: var(--ink-soft); }
+.crumbs a:hover { color: var(--pen); }
 .crumbs a::before { content: "← "; }
 
+/* A section of the page: a rule, then its matter. */
 .card {
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  padding: 20px 22px;
-  margin-bottom: 20px;
-  box-shadow: var(--lift);
+  margin: 0 0 34px;
+  padding: 20px 0 0;
+  border-top: 1px solid var(--rule-strong);
 }
-.card--flush { padding: 0; overflow: hidden; }
+.card > h2:first-child { margin-top: -2px; }
+/* A section that is a box in its own right: a table, a panel. */
+.card--flush { padding: 0; border: 1px solid var(--rule-strong); border-radius: var(--radius); overflow: clip; }
 .narrow { max-width: 560px; margin-inline: auto; }
 
-.eyebrow {
-  font: 700 0.95rem/1 var(--font-display);
-  font-stretch: condensed;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-  margin: 0 0 8px;
-}
-.eyebrow ~ .eyebrow { margin-top: 18px; }
-
-.empty { color: var(--ink-soft); margin: 0; }
-.empty-state { text-align: center; padding: 36px 22px; }
+.empty { color: var(--ink-soft); font-style: italic; margin: 0; }
+.empty-state { text-align: center; padding: 36px 22px; border: 1px dashed var(--rule-strong); border-radius: var(--radius); }
 .empty-state p:last-child { margin: 0; }
 
 /* -------------------------------------------------------------- flashes */
 
+/* A slip of paper laid on the page. */
 .flash {
-  border-radius: 8px;
   padding: 12px 16px;
-  margin-bottom: 20px;
-  font-weight: 550;
-  border: 1px solid;
+  margin: 0 0 24px;
+  border-left: 4px solid;
+  border-radius: 0 3px 3px 0;
+  background: var(--page-shade);
 }
-.flash--ok { background: color-mix(in srgb, var(--sent) 12%, var(--paper)); border-color: color-mix(in srgb, var(--sent) 45%, transparent); }
-.flash--error { background: color-mix(in srgb, var(--danger) 11%, var(--paper)); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
-.flash--info { background: var(--marigold-wash); border-color: color-mix(in srgb, var(--marigold) 55%, transparent); }
+.flash--ok { border-color: var(--sent); }
+.flash--error { border-color: var(--danger); }
+.flash--info { border-color: var(--foil); }
 
 .notice {
-  background: var(--marigold-wash);
-  border-left: 4px solid var(--marigold);
+  background: var(--page-shade);
+  border-left: 4px solid var(--foil);
   padding: 10px 14px;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 3px 3px 0;
 }
 
 .warning {
-  background: var(--marigold-wash);
-  border-left: 4px solid var(--marigold);
+  background: var(--page-shade);
+  border-left: 4px solid var(--ribbon);
   padding: 14px 16px;
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 3px 3px 0;
   margin-bottom: 18px;
 }
 .warning p:last-child { margin: 0; }
@@ -255,26 +311,29 @@ p { margin: 0 0 0.8em; }
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 11px 17px;
+  padding: 10px 16px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--button);
   color: var(--button-text);
-  font: 650 0.95rem/1.1 var(--font-body);
+  font: 600 0.8rem/1.1 var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 80ms ease, filter 120ms ease;
+  transition: background-color 120ms ease, transform 80ms ease;
 }
-.button:hover { filter: brightness(1.15); text-decoration: none; }
+.button:hover { background: var(--button-hover); text-decoration: none; }
 .button:active { transform: translateY(1px); }
 .button[disabled] { opacity: 0.6; cursor: progress; }
 
-.button--quiet { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--rule); }
-.button--quiet:hover { filter: none; box-shadow: inset 0 0 0 1.5px var(--ink-soft); }
-.button--danger { background: var(--danger); color: #fff; }
-.button--danger-quiet { background: transparent; color: var(--danger); box-shadow: inset 0 0 0 1.5px currentColor; }
-.button--danger-quiet:hover { filter: none; background: color-mix(in srgb, var(--danger) 8%, transparent); }
-.button--small { padding: 7px 12px; font-size: 0.86rem; }
+.button--quiet { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--rule-strong); }
+.button--quiet:hover { background: var(--page-shade); }
+.button--danger { background: var(--ribbon); color: #fff; }
+.button--danger:hover { background: #9e1b23; }
+.button--danger-quiet { background: transparent; color: var(--ribbon); box-shadow: inset 0 0 0 1.5px currentColor; }
+.button--danger-quiet:hover { background: color-mix(in srgb, var(--ribbon) 8%, transparent); }
+.button--small { padding: 7px 11px; font-size: 0.72rem; }
 
 .inline-form { display: inline; margin: 0; }
 
@@ -283,52 +342,52 @@ p { margin: 0 0 0.8em; }
 .form { display: grid; gap: 18px; }
 .field { display: grid; gap: 6px; border: 0; margin: 0; padding: 0; min-width: 0; }
 .field--short { max-width: 20rem; }
-.field__label { font-weight: 650; padding: 0; }
-.field__sublabel { display: block; font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 4px; }
-.field__error { color: var(--danger); font-weight: 550; font-size: 0.92rem; }
+.field__label { font: 600 0.78rem/1.3 var(--font-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); padding: 0; }
+.field__sublabel { display: block; font: 500 0.7rem/1 var(--font-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 5px; }
+.field__error { color: var(--danger); font-weight: 600; font-size: 0.92rem; }
 .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
 
-input:not([type="checkbox"]), select, textarea {
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
   width: 100%;
   font: inherit;
+  font-size: 1rem;
   color: var(--ink);
-  background: var(--paper);
-  border: 1.5px solid var(--rule);
-  border-radius: 8px;
-  padding: 9px 11px;
+  background: var(--page);
+  border: 1.5px solid var(--rule-strong);
+  border-radius: var(--radius);
+  padding: 8px 11px;
 }
 input:hover, select:hover, textarea:hover { border-color: var(--ink-soft); }
 input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--danger); }
-textarea { resize: vertical; line-height: 1.45; }
-input[type="checkbox"] { width: 1.15rem; height: 1.15rem; accent-color: var(--ink); margin: 0.18rem 0 0; flex: none; }
+textarea { resize: vertical; line-height: 1.5; }
+input[type="checkbox"], input[type="radio"] { width: 1.1rem; height: 1.1rem; accent-color: var(--cover); margin: 0.2rem 0 0; flex: none; }
+::placeholder { color: var(--ink-soft); opacity: 0.8; font-style: italic; }
 
-.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 500; }
+.check { display: flex; gap: 10px; align-items: flex-start; }
 .check + .check { margin-top: -8px; }
 fieldset .check { margin-top: 6px; }
-.check--big { padding: 14px 16px; border: 1.5px solid var(--rule); border-radius: 10px; }
+.check--big { padding: 14px 16px; border: 1.5px solid var(--rule-strong); border-radius: var(--radius); }
 
 .birthday { display: grid; grid-template-columns: 5.5rem minmax(9rem, 13rem) 6.5rem; gap: 12px; }
 @media (max-width: 480px) { .birthday { grid-template-columns: 1fr 1.6fr; } .birthday label:last-child { grid-column: 1 / -1; max-width: 8rem; } }
 
-.hint { color: var(--ink-soft); font-size: 0.9rem; margin: 0; }
-.hint-list { color: var(--ink-soft); font-size: 0.92rem; margin: 0; padding-left: 1.2em; }
+.hint { color: var(--ink-soft); font-size: 0.92rem; margin: 0; }
+.hint-list { color: var(--ink-soft); font-size: 0.94rem; margin: 0; padding-left: 1.2em; }
 .hint-list li + li { margin-top: 4px; }
 
-.form__actions { display: flex; align-items: center; gap: 18px; }
+.form__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
 .form__actions > .button { flex: none; }
 
-.danger-zone { margin-top: 8px; }
-
 .example {
-  background: var(--board);
-  border-radius: 8px;
+  background: var(--page-shade);
+  border-radius: var(--radius);
   padding: 12px 14px;
   margin: 0;
   overflow-x: auto;
   tab-size: 20;
 }
 
-.placeholders summary { cursor: pointer; font-weight: 550; color: var(--ballpoint); }
+.placeholders summary { cursor: pointer; font-weight: 600; color: var(--pen); }
 .placeholders dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 12px 0; }
 .placeholders dd { margin: 0; color: var(--ink-soft); }
 
@@ -336,157 +395,98 @@ fieldset .check { margin-top: 6px; }
 .problems li + li { margin-top: 4px; }
 .problems--soft { color: var(--ink-soft); }
 
-/* ------------------------------------------------------------- the leaf */
+/* ----------------------------------------------------- the printed date */
 
-.leaf {
-  position: relative;
-  isolation: isolate;
-  width: 100%;
-  max-width: 340px;
-  margin-inline: auto;
-  transform: rotate(-1.2deg);
-  animation: settle 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
-}
-
-/* The pad of leaves underneath, for tomorrow and after. */
-.leaf::after {
-  content: "";
-  position: absolute;
-  inset: 18px 5px -7px 7px;
-  z-index: -1;
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: 0 0 6px 6px;
-  transform: rotate(2.2deg);
-  box-shadow: var(--lift);
-}
-
-.leaf__binding {
-  position: relative;
-  height: 24px;
-  background: var(--binding);
-  border-radius: 8px 8px 2px 2px;
-}
-/* Two rivets. */
-.leaf__binding::before,
-.leaf__binding::after {
-  content: "";
-  position: absolute;
-  top: 8px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff 0 1px, #a9aec8 1.5px, #6d7292 4px);
-}
-.leaf__binding::before { left: 22%; }
-.leaf__binding::after { right: 22%; }
-
-.leaf__paper {
-  position: relative;
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-top: 0;
-  border-radius: 0 0 6px 6px;
-  padding: 26px 24px 26px;
-  text-align: center;
-  box-shadow: var(--lift);
-}
-/* The perforation the leaf tears along. */
-.leaf__paper::before {
-  content: "";
-  position: absolute;
-  top: 9px;
-  left: 14px;
-  right: 14px;
-  height: 6px;
-  background: radial-gradient(circle, var(--rule) 2px, transparent 2.5px) 0 0 / 10px 6px repeat-x;
-}
-
-.leaf__month {
-  font: 700 1.15rem/1 var(--font-display);
-  font-stretch: condensed;
+/* How a diary prints the day at the head of its page: the day of the year
+ * and the days left, the numeral, the weekday in both scripts, the month.
+ * The people to remember are written in below, in pen. */
+.day { position: relative; }
+.day__count {
+  margin: 0;
+  font: 500 0.76rem/1 var(--font-ui);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-soft);
-  margin: 8px 0 0;
 }
-
-.leaf__day {
-  font: 700 clamp(7rem, 26vw, 10rem)/0.82 var(--font-display);
-  font-stretch: condensed;
+.day__num {
+  margin: 4px 0 0;
+  font: 700 clamp(5.4rem, 11vw, 8.2rem)/0.82 var(--font-display);
   font-variant-numeric: lining-nums;
-  letter-spacing: -0.02em;
-  margin: 12px 0 2px;
+  letter-spacing: -0.035em;
   color: var(--ink);
+  animation: settle 480ms ease-out both;
 }
+.day__weekday { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 14px 0 0; }
+.day__en { font: 600 0.95rem/1 var(--font-ui); letter-spacing: 0.28em; text-transform: uppercase; }
+.day__ml { font: 400 1.05rem/1 var(--font-ml); color: var(--ink-soft); }
+.day__month { margin: 8px 0 0; font: 400 1.3rem/1.2 var(--font-display); color: var(--ink-soft); }
+.day--sunday .day__num,
+.day--sunday .day__en { color: var(--ribbon); }
 
-.leaf__weekday {
-  font: 700 1.2rem/1 var(--font-display);
-  font-stretch: condensed;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  margin: 8px 0 18px;
-  padding-left: 0.32em; /* optically centred against the tracking */
-}
-
-.leaf--sunday .leaf__day,
-.leaf--sunday .leaf__weekday { color: var(--sunday); }
-
-.leaf__names {
+.day__people {
   list-style: none;
-  margin: 0;
+  margin: 20px 0 0;
   padding: 14px 0 0;
-  border-top: 1.5px dashed var(--rule);
-  font: 400 1.55rem/1.3 var(--font-hand);
-  color: var(--ballpoint);
-  transform: rotate(-2.5deg);
+  border-top: 1px solid var(--rule-strong);
+  font: 400 1.5rem/1.3 var(--font-hand);
+  color: var(--pen);
 }
-.leaf__names li { overflow-wrap: anywhere; }
-.leaf__age { font-size: 0.8em; opacity: 0.8; }
-
-.leaf__blank {
-  margin: 0;
+.day__people li { overflow-wrap: anywhere; }
+.day__age { font-size: 0.8em; opacity: 0.8; }
+.day__blank {
+  margin: 20px 0 0;
   padding-top: 14px;
-  border-top: 1.5px dashed var(--rule);
-  font: 400 1.2rem/1.3 var(--font-hand);
+  border-top: 1px solid var(--rule-strong);
   color: var(--ink-soft);
+  font-style: italic;
 }
-
-.leaf--small { max-width: 168px; transform: rotate(var(--tilt, -1deg)); animation: none; }
-.leaf--small::after { inset: 12px 4px -5px 5px; }
-.leaf--small .leaf__binding { height: 14px; border-radius: 6px 6px 2px 2px; }
-.leaf--small .leaf__binding::before,
-.leaf--small .leaf__binding::after { top: 4px; width: 6px; height: 6px; }
-.leaf--small .leaf__paper { padding: 18px 12px 16px; }
-.leaf--small .leaf__paper::before { top: 6px; left: 10px; right: 10px; }
-.leaf--small .leaf__month { font-size: 0.85rem; margin-top: 4px; }
-.leaf--small .leaf__day { font-size: 4.2rem; margin-top: 6px; }
-.leaf--small .leaf__weekday { font-size: 0.8rem; letter-spacing: 0.24em; margin: 4px 0 10px; }
-.leaf--small .leaf__names { font-size: 1.1rem; padding-top: 8px; }
 
 @keyframes settle {
-  from { opacity: 0; transform: translateY(-14px) rotate(-5deg); }
-  to { opacity: 1; transform: rotate(-1.2deg); }
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .leaf { animation: none; }
-  .button { transition: none; }
+/* The same date as a thumb tab: the month, the numeral, the weekday. */
+.day--small {
+  display: inline-grid;
+  justify-items: center;
+  min-width: 4.4rem;
+  padding: 7px 9px 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  background: var(--page);
+  text-align: center;
 }
+.day--small .day__month {
+  order: -1;
+  margin: 0 0 3px;
+  font: 600 0.66rem/1 var(--font-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.day--small .day__num { margin: 0; font-size: 2.1rem; line-height: 1; letter-spacing: -0.02em; animation: none; }
+.day--small .day__weekday { margin: 3px 0 0; gap: 0; }
+.day--small .day__en { font-size: 0.64rem; letter-spacing: 0.14em; }
+.day--small .day__ml { display: none; }
+.day--small .day__people { font-size: 1.05rem; margin: 8px 0 0; padding-top: 6px; border-top: 1px dashed var(--rule-strong); text-align: left; }
+.day--small .day__blank { display: none; }
 
 /* ---------------------------------------------------------------- today */
 
-.today {
+/* The diary open: the day on the left-hand page, the writing on the right. */
+.spread {
   display: grid;
-  grid-template-columns: minmax(260px, 350px) 1fr;
-  gap: 40px;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 0 48px;
   align-items: start;
   margin-bottom: 36px;
 }
-.today__leaf { padding-top: 8px; position: sticky; top: 20px; }
-@media (max-width: 800px) {
-  .today { grid-template-columns: 1fr; gap: 32px; }
-  .today__leaf { position: static; }
+.spread__right { border-left: 1px solid var(--rule-strong); padding-left: 40px; min-height: 100%; }
+.spread__left > .day { margin-bottom: 34px; }
+@media (max-width: 880px) {
+  .spread { grid-template-columns: 1fr; }
+  .spread__right { border-left: 0; padding-left: 0; }
 }
 
 /* A dot, then one run of text that wraps beside it, never under it. */
@@ -508,9 +508,8 @@ fieldset .check { margin-top: 6px; }
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-weight: 700;
-  font-size: 0.85rem;
-  border: 1.5px solid var(--rule);
+  font: 700 0.78rem/1 var(--font-ui);
+  border: 1.5px solid var(--rule-strong);
   color: var(--ink-soft);
 }
 .setup__mark:empty::before { content: counter(step); }
@@ -525,12 +524,12 @@ fieldset .check { margin-top: 6px; }
   grid-template-columns: 1fr auto;
   gap: 2px 14px;
   align-items: center;
-  padding: 12px 0;
+  padding: 11px 0;
   border-top: 1px solid var(--rule);
 }
 .job:first-child { border-top: 0; padding-top: 0; }
 .job__title { margin: 0; grid-column: 1; grid-row: 1; }
-.job__state { margin: 0; display: flex; gap: 6px; font-size: 0.93rem; color: var(--ink-soft); grid-column: 2; grid-row: 1; white-space: nowrap; }
+.job__state { margin: 0; display: flex; gap: 6px; font: 400 0.84rem/1.4 var(--font-ui); color: var(--ink-soft); grid-column: 2; grid-row: 1; white-space: nowrap; }
 .job--failed .job__state { grid-column: 1; grid-row: 2; white-space: normal; }
 .job .inline-form { grid-column: 2; grid-row: 1 / span 2; }
 .job .inline-form .button { margin: 0; }
@@ -540,49 +539,35 @@ fieldset .check { margin-top: 6px; }
   .job .inline-form { grid-column: 1; grid-row: 3; margin-top: 6px; }
 }
 
-.tick { display: inline-block; min-width: 1.1em; text-align: center; font-weight: 800; }
+.tick { display: inline-block; min-width: 1.1em; text-align: center; font-weight: 700; }
 .tick--sent { color: var(--sent); }
 .tick--failed { color: var(--danger); }
 .tick--due, .tick--sending { color: var(--ink-soft); }
 
-.upcoming { margin-bottom: 36px; }
-.upcoming h2 { margin-bottom: 18px; }
-.leaves {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 30px 22px;
-}
-.leaves li:nth-child(3n + 2) .leaf { --tilt: 1.3deg; }
-.leaves li:nth-child(3n) .leaf { --tilt: -0.4deg; }
-.leaves__when {
-  margin: 16px 0 0;
-  text-align: center;
-  font-size: 0.86rem;
-  font-weight: 650;
-  color: var(--ink-soft);
-}
+/* Coming up: a tab for each day that holds someone, and who. */
+.upcoming__list { list-style: none; margin: 0; padding: 0; }
+.upcoming__list li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: start; padding: 12px 0; border-top: 1px solid var(--rule); }
+.upcoming__list li:first-child { border-top: 0; padding-top: 0; }
+.upcoming__names { margin: 0; padding: 4px 0 0; list-style: none; font: 400 1.3rem/1.3 var(--font-hand); color: var(--pen); }
+.upcoming__when { margin: 2px 0 0; font: 500 0.74rem/1 var(--font-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
 
 /* --------------------------------------------------------------- tables */
 
-.table-tools { padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+.table-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; padding: 12px 14px; border-bottom: 1px solid var(--rule-strong); background: var(--page-shade); }
 .filter { max-width: 22rem; }
 .table-wrap { overflow-x: auto; }
-.table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.table { width: 100%; border-collapse: collapse; font-size: 0.96rem; }
 .table th {
   text-align: left;
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
+  font: 600 0.7rem/1.3 var(--font-ui);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-soft);
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--rule);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule-strong);
   white-space: nowrap;
 }
-.table td { padding: 12px 16px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.table td { padding: 11px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
 .table tbody tr:last-child td { border-bottom: 0; }
 .table a { font-weight: 600; }
 .table .is-paused td { color: var(--ink-soft); }
@@ -592,15 +577,17 @@ fieldset .check { margin-top: 6px; }
 
 .chip {
   display: inline-block;
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: var(--board);
-  font-size: 0.82rem;
-  font-weight: 650;
+  padding: 3px 9px;
+  border-radius: 3px;
+  background: var(--page-shade);
+  font: 600 0.68rem/1.3 var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   white-space: nowrap;
+  vertical-align: middle;
 }
-.chip--today { background: var(--marigold); color: #1b2040; }
-.chip--muted { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); color: var(--ink-soft); font-weight: 550; }
+.chip--today { background: var(--ribbon); color: #fff; }
+.chip--muted { background: transparent; box-shadow: inset 0 0 0 1px var(--rule-strong); color: var(--ink-soft); }
 
 /* --------------------------------------------------- the wish preview */
 
@@ -617,8 +604,7 @@ fieldset .check { margin-top: 6px; }
   box-shadow: 0 1px 0.5px rgb(11 20 26 / 0.13);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 0.95rem;
-  line-height: 1.4;
+  font: 400 0.95rem/1.4 var(--font-ui);
 }
 /* The bubble's tail, top right, as in WhatsApp. */
 .bubble::after {
@@ -632,32 +618,19 @@ fieldset .check { margin-top: 6px; }
 
 /* ------------------------------------------------------ the People table */
 
-/* clip, not hidden: hidden would make the card the scroll box, and the Save
- * bar below could no longer stick to the bottom of the window. */
-.card--flush { overflow: clip; }
-
-.table-tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 20px;
-}
-
 .people { table-layout: fixed; }
 .people th:nth-child(1) { width: 23%; }
 .people th:nth-child(2) { width: 16%; }
 .people th:nth-child(3) { width: 19%; }
 .people th:nth-child(4) { width: 11%; }
-.th-note { display: block; margin-top: 2px; font-weight: 500; letter-spacing: 0.02em; text-transform: none; }
+.th-note { display: block; margin-top: 2px; font-weight: 500; letter-spacing: 0.04em; text-transform: none; }
 .people__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .people input[type="time"] { min-width: 0; }
 .people td { vertical-align: top; padding-top: 10px; padding-bottom: 10px; }
-.people input, .people select, .people textarea { padding: 7px 9px; font-size: 0.92rem; }
+.people input, .people select, .people textarea { padding: 6px 9px; font-size: 0.92rem; }
 .people textarea { min-height: 2.6rem; }
-.people__who a { font-weight: 650; }
-.people__when { display: block; margin-top: 4px; font-size: 0.85rem; color: var(--ink-soft); }
-.people__when .chip { font-size: 0.76rem; }
+.people__who a { font-weight: 600; }
+.people__when { display: block; margin-top: 4px; font-size: 0.86rem; color: var(--ink-soft); }
 .people .field__error { display: block; margin-top: 4px; font-size: 0.84rem; }
 .people tr.is-invalid td { background: color-mix(in srgb, var(--danger) 6%, transparent); }
 
@@ -670,24 +643,23 @@ fieldset .check { margin-top: 6px; }
   align-items: center;
   gap: 8px 18px;
   padding: 14px 16px;
-  background: var(--paper);
-  border-top: 1px solid var(--rule);
-  box-shadow: 0 -8px 16px -12px rgb(27 32 64 / 0.25);
+  background: var(--page);
+  border-top: 1px solid var(--rule-strong);
+  box-shadow: 0 -8px 16px -12px rgb(0 0 0 / 0.3);
 }
 
 /* A phone: each person becomes a small card, each field with its label. */
 @media (max-width: 760px) {
   .people, .people tbody, .people tr, .people td { display: block; width: auto; }
   .people thead { display: none; }
-  .people tr { padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+  .people tr { padding: 14px 16px; border-bottom: 1px solid var(--rule-strong); }
   .people td { padding: 6px 0; border: 0; }
   .people td[data-label]::before {
     content: attr(data-label);
     display: block;
     margin-bottom: 4px;
-    font-size: 0.74rem;
-    font-weight: 700;
-    letter-spacing: 0.09em;
+    font: 600 0.68rem/1.3 var(--font-ui);
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--ink-soft);
   }
@@ -695,78 +667,58 @@ fieldset .check { margin-top: 6px; }
 }
 
 /* The default messages: a panel on People, a pair on Settings. */
-.defaults { padding: 0; }
-.defaults > summary {
-  cursor: pointer;
-  padding: 16px 22px;
-  list-style-position: inside;
-}
-.defaults[open] > summary { border-bottom: 1px solid var(--rule); }
-.defaults__form { padding: 18px 22px 20px; }
+.defaults { padding: 0; border: 1px solid var(--rule-strong); border-radius: var(--radius); }
+.defaults > summary { cursor: pointer; padding: 14px 18px; list-style-position: inside; }
+.defaults[open] > summary { border-bottom: 1px solid var(--rule-strong); }
+.defaults__form { padding: 18px 18px 20px; }
 .defaults__pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
 
 /* Birthday or anniversary, on a person's page. */
 .kinds { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .kinds .check { margin: 0; }
-.kinds input[type="radio"] { width: 1.1rem; height: 1.1rem; accent-color: var(--ink); margin: 0.2rem 0 0; }
 
-.person-extras { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 8px; }
+.person-extras { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 18px; }
 .person-extras__remove { margin-left: auto; }
 
-.settings-title {
-  margin: 0 0 14px;
-  font: 700 1.05rem/1 var(--font-display);
-  font-stretch: condensed;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
+.settings-title { margin: 0 0 14px; }
 .wa-changed { margin: 14px 0 0; }
 
 .settings-group { border: 0; margin: 0; padding: 0; display: grid; gap: 16px; min-width: 0; }
-.settings-group legend {
-  padding: 0;
-  margin-bottom: 14px;
-  font: 700 1.05rem/1 var(--font-display);
-  font-stretch: condensed;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
-.settings-group + .settings-group { padding-top: 18px; border-top: 1px solid var(--rule); }
+.settings-group legend { padding: 0; margin-bottom: 14px; }
+.settings-group + .settings-group { padding-top: 20px; border-top: 1px solid var(--rule); }
 
 .arrow { color: var(--ink-soft); margin: 0 2px; }
 
 /* ------------------------------------------------------------- notebook */
 
-/* Lined paper with a margin, for writing: the journal, and today's page. */
+/* Ruled paper with a margin, for writing: the journal, and today's page. */
 .ruled {
   --line: 1.75rem;
   line-height: var(--line);
   padding: 2px 14px 2px 3rem;
   background:
-    linear-gradient(90deg, transparent 2.2rem, color-mix(in srgb, var(--sunday) 35%, transparent) 2.2rem 2.3rem, transparent 2.3rem),
-    linear-gradient(transparent calc(var(--line) - 1px), color-mix(in srgb, var(--ballpoint) 16%, transparent) 0) 0 2px / 100% var(--line),
-    var(--paper);
+    linear-gradient(90deg, transparent 2.2rem, color-mix(in srgb, var(--ribbon) 45%, transparent) 2.2rem 2.3rem, transparent 2.3rem),
+    linear-gradient(transparent calc(var(--line) - 1px), var(--rule-strong) 0) 0 2px / 100% var(--line),
+    var(--page);
   background-attachment: local;
 }
 
 .notes-search { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 14px; }
 .notes-search input { flex: 1 1 12rem; max-width: 34rem; }
 
-.tag { color: var(--ballpoint); text-decoration: none; font-weight: 600; }
+.tag { color: var(--pen); text-decoration: none; font-weight: 600; }
 .tag:hover { text-decoration: underline; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 22px; }
 .tags .tag {
-  padding: 3px 11px;
-  border-radius: 999px;
-  background: var(--paper);
-  box-shadow: inset 0 0 0 1px var(--rule);
-  font-size: 0.88rem;
+  padding: 4px 10px;
+  border-radius: 3px;
+  background: var(--page-shade);
+  font: 500 0.8rem/1.3 var(--font-ui);
+  letter-spacing: 0.04em;
   white-space: nowrap;
 }
-.tags .tag:hover { text-decoration: none; box-shadow: inset 0 0 0 1.5px var(--ballpoint); }
-.tags .tag.is-current { background: var(--ballpoint); color: var(--paper); box-shadow: none; }
+.tags .tag:hover { text-decoration: none; box-shadow: inset 0 0 0 1.5px var(--pen); }
+.tags .tag.is-current { background: var(--cover); color: var(--foil); }
 .tag__count { color: var(--ink-soft); font-weight: 500; margin-left: 2px; }
 .tag.is-current .tag__count { color: inherit; opacity: 0.75; }
 
@@ -789,81 +741,73 @@ fieldset .check { margin-top: 6px; }
   gap: 6px;
   min-width: 0;
   padding: 16px 18px 14px;
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  box-shadow: var(--lift);
-  transition: transform 120ms ease;
+  background: var(--page);
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  transition: background-color 120ms ease;
 }
-.note-card:hover { transform: translateY(-2px); }
-.note-card.is-pinned { box-shadow: inset 0 4px 0 var(--marigold), var(--lift); }
-.note-card--journal { border-left: 3px solid color-mix(in srgb, var(--sunday) 45%, transparent); }
-.note-card__title { margin: 0; font-size: 1.02rem; font-weight: 650; overflow-wrap: anywhere; }
+.note-card:hover { background: var(--page-shade); }
+.note-card.is-pinned { box-shadow: inset 4px 0 0 var(--foil); }
+.note-card--journal { border-left: 3px solid color-mix(in srgb, var(--ribbon) 55%, transparent); }
+.note-card__title { margin: 0; font: 400 1.1rem/1.3 var(--font-display); letter-spacing: 0; text-transform: none; color: var(--ink); overflow-wrap: anywhere; }
 .note-card__title a { color: var(--ink); text-decoration: none; }
 .note-card__title a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
 .note-card__text {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 0.93rem;
+  font-size: 0.94rem;
   overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
   overflow: hidden;
 }
-.note-card__meta { margin: auto 0 0; padding-top: 6px; font-size: 0.82rem; color: var(--ink-soft); }
+.note-card__meta { margin: auto 0 0; padding-top: 6px; font: 400 0.8rem/1.4 var(--font-ui); color: var(--ink-soft); }
 .note-card__meta .tag { position: relative; z-index: 1; }
-.note-card__pin { font-weight: 650; color: var(--ink); }
+.note-card__pin { font-weight: 600; color: var(--foil-ink); }
 
-mark { background: var(--marigold-wash); color: inherit; border-radius: 3px; padding: 0 2px; box-shadow: inset 0 -2px 0 var(--marigold); }
+mark { background: color-mix(in srgb, var(--foil) 30%, transparent); color: inherit; border-radius: 2px; padding: 0 2px; box-shadow: inset 0 -2px 0 var(--foil); }
 
 /* A note's own page. */
-.note { padding: 26px 30px 30px; }
-.note__title {
-  font: 650 1.65rem/1.25 var(--font-body);
-  font-stretch: normal;
-  letter-spacing: 0;
-  text-transform: none;
-  margin: 0 0 6px;
-  overflow-wrap: anywhere;
-}
-.note__meta { color: var(--ink-soft); font-size: 0.9rem; margin: 0 0 20px; }
-.note__body { max-width: 72ch; font-size: 1.03rem; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note { padding: 22px 0 0; }
+.note__title { font: 400 1.9rem/1.2 var(--font-display); margin: 0 0 6px; overflow-wrap: anywhere; }
+.note__meta { color: var(--ink-soft); font: 400 0.86rem/1.4 var(--font-ui); margin: 0 0 20px; }
+.note__body { max-width: 72ch; font-size: 1.06rem; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .note-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 .note-actions__remove { margin-left: auto; }
 .note-input { min-height: 18rem; line-height: 1.6; }
 
-/* The journal: the day's leaf, its page, and the latest pages. */
+/* The journal: the day's tab, its page, and the latest pages. */
 .day-nav { display: flex; flex-wrap: wrap; gap: 8px; }
 .journal {
   display: grid;
-  grid-template-columns: 170px minmax(0, 1fr) 220px;
+  grid-template-columns: auto minmax(0, 1fr) 220px;
   gap: 28px;
   align-items: start;
   margin-bottom: 20px;
 }
-.journal__leaf { padding-top: 6px; }
-.journal__page { margin: 0; }
+.journal__day { padding-top: 4px; }
+.journal__page { margin: 0; padding: 0; border: 0; }
 .journal__page .ruled { min-height: 28rem; }
 .journal__pages ul { list-style: none; margin: 0; padding: 0; }
 .journal__pages li { display: grid; gap: 1px; padding: 8px 0; border-top: 1px solid var(--rule); font-size: 0.92rem; }
 .journal__pages li:first-child { border-top: 0; padding-top: 0; }
-.journal__pages li[aria-current] a { color: var(--ink); text-decoration: none; font-weight: 650; }
+.journal__pages li[aria-current] a { color: var(--ink); text-decoration: none; font-weight: 600; }
 .journal__pages .muted { font-size: 0.84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 980px) {
-  .journal { grid-template-columns: 150px minmax(0, 1fr); }
+  .journal { grid-template-columns: auto minmax(0, 1fr); }
   .journal__pages { grid-column: 1 / -1; }
 }
 @media (max-width: 640px) {
   .journal { grid-template-columns: 1fr; gap: 22px; }
   .journal__page .ruled { min-height: 18rem; }
   /* On a phone the writing comes first; the date is in the heading. */
-  .journal__leaf { order: 1; }
+  .journal__day { order: 1; }
   .journal__pages { order: 2; }
 }
 
 .journal-card__form { gap: 12px; }
-.journal-card .ruled { min-height: calc(4 * 1.75rem + 4px); }
+.journal-card .ruled { min-height: calc(5 * 1.75rem + 4px); }
 
 /* Settings → Calendar: where 📅 messages count. */
 .chat-picks__list {
@@ -871,9 +815,9 @@ mark { background: var(--marigold-wash); color: inherit; border-radius: 3px; pad
   gap: 2px;
   max-height: 17rem;
   overflow: auto;
-  padding: 10px 12px;
-  border: 1.5px solid var(--rule);
-  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: var(--radius);
 }
 .chat-picks__list .check { margin: 0; padding: 4px 0; }
 .chat-pick { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 16px; }
@@ -882,39 +826,57 @@ mark { background: var(--marigold-wash); color: inherit; border-radius: 3px; pad
 .chat-pick__every.is-off { opacity: 0.6; }
 .claude-note { margin-top: 4px; }
 
-.person-notes { margin-top: 20px; }
+.person-notes { margin-top: 24px; }
 .person-notes__list { margin: 0 0 14px; padding-left: 1.2em; }
 .person-notes__list li + li { margin-top: 4px; }
 .person-notes p:last-child { margin: 0; }
 
-@media (prefers-reduced-motion: reduce) {
-  .note-card { transition: none; }
-  .note-card:hover { transform: none; }
-}
-
 /* ------------------------------------------------------------- calendar */
 
-.cal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; align-items: start; }
-.cal-side { display: grid; gap: 20px; }
+.cal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; align-items: start; }
+.cal-side { display: grid; gap: 24px; }
 .cal-side .card { margin: 0; }
 @media (max-width: 980px) { .cal-layout { grid-template-columns: 1fr; } }
 
-.cal-wrap { margin: 0; }
+/* The month, with the year's thumb index down its side. */
+.cal-wrap { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
 .cal { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .cal th {
   padding: 10px 8px;
   text-align: left;
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
+  font: 600 0.68rem/1.3 var(--font-ui);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-soft);
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule-strong);
 }
 .cal th abbr { text-decoration: none; }
-.cal th.is-sunday { color: var(--sunday); }
+.cal th.is-sunday { color: var(--ribbon); }
 
-/* A day: its numeral (red on Sundays, ringed in marigold today), then what
+.months { position: relative; display: flex; flex-direction: column; align-self: stretch; border-left: 1px solid var(--rule-strong); background: var(--page-shade); }
+.months a {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 11px;
+  min-height: 2rem;
+  font: 600 0.66rem/1 var(--font-ui);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+}
+.months a:last-child { border-bottom: 0; }
+.months a:hover { color: var(--ink); background: var(--page); }
+.months a[aria-current="true"] { background: var(--cover); color: var(--foil); box-shadow: inset 3px 0 0 var(--ribbon); }
+@media (max-width: 640px) {
+  .cal-wrap { grid-template-columns: 1fr; }
+  .months { flex-direction: row; overflow-x: auto; border-left: 0; border-top: 1px solid var(--rule-strong); }
+  .months a { flex: 1 0 auto; justify-content: center; min-height: 2.2rem; border-bottom: 0; border-right: 1px solid var(--rule); }
+}
+
+/* A day: its numeral (red on Sundays, on the ribbon's red today), then what
  * it holds. The whole cell picks the day. */
 .cal__day {
   position: relative;
@@ -927,48 +889,46 @@ mark { background: var(--marigold-wash); color: inherit; border-radius: 3px; pad
 }
 .cal tr > .cal__day:last-child { border-right: 0; }
 .cal tbody tr:last-child .cal__day { border-bottom: 0; }
-.cal__day:hover { background: color-mix(in srgb, var(--marigold-wash) 70%, transparent); }
-.cal__day.is-other { background: color-mix(in srgb, var(--board) 50%, var(--paper)); }
-.cal__day.is-selected { box-shadow: inset 0 0 0 2px var(--ballpoint); }
+.cal__day:hover { background: var(--page-shade); }
+.cal__day.is-other { background: color-mix(in srgb, var(--page-shade) 60%, var(--page)); }
+.cal__day.is-selected { box-shadow: inset 0 0 0 2px var(--cover); }
 .cal__num {
   display: inline-grid;
   place-items: center;
-  min-width: 1.75rem;
-  height: 1.75rem;
+  min-width: 1.8rem;
+  height: 1.8rem;
   padding: 0 4px;
   border-radius: 999px;
   color: var(--ink);
-  font: 700 1.1rem/1 var(--font-display);
-  font-stretch: condensed;
+  font: 700 1.05rem/1 var(--font-display);
   text-decoration: none;
 }
 .cal__num::after { content: ""; position: absolute; inset: 0; }
 .cal__num:hover { text-decoration: none; }
-.cal__day.is-sunday .cal__num { color: var(--sunday); }
-.cal__day.is-other .cal__num { opacity: 0.55; }
-.cal__day.is-today .cal__num { background: var(--marigold); color: #1b2040; }
+.cal__day.is-sunday .cal__num { color: var(--ribbon); }
+.cal__day.is-other .cal__num { opacity: 0.5; }
+.cal__day.is-today .cal__num { background: var(--ribbon); color: #fff; }
 .cal__journal { position: absolute; top: 8px; right: 9px; font-size: 0.85rem; color: var(--ink-soft); }
 .cal__items { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; }
 .cal__item {
   padding: 1px 5px;
-  border-radius: 4px;
-  font-size: 0.76rem;
-  line-height: 1.35;
+  border-radius: 3px;
+  font: 400 0.78rem/1.35 var(--font-ui);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.cal__item--person { color: var(--ballpoint); font: 400 0.9rem/1.25 var(--font-hand); }
-.cal__item--event { background: color-mix(in srgb, var(--ballpoint) 13%, transparent); }
-.cal__item--event.is-allday { background: color-mix(in srgb, var(--marigold) 26%, transparent); }
+.cal__item--person { color: var(--pen); font: 400 0.92rem/1.25 var(--font-hand); }
+.cal__item--event { background: color-mix(in srgb, var(--cover) 12%, transparent); }
+.cal__item--event.is-allday { background: color-mix(in srgb, var(--foil) 28%, transparent); }
 .cal__item--task { color: var(--ink-soft); }
 .cal__item--task.is-done { text-decoration: line-through; }
-.cal__time { font-weight: 700; font-variant-numeric: tabular-nums; }
-.cal__more { display: block; margin-top: 2px; padding-left: 5px; font-size: 0.72rem; color: var(--ink-soft); }
+.cal__time { font-weight: 600; font-variant-numeric: tabular-nums; }
+.cal__more { display: block; margin-top: 2px; padding-left: 5px; font: 400 0.7rem/1.3 var(--font-ui); color: var(--ink-soft); }
 .cal__dots { display: none; justify-content: center; gap: 3px; margin-top: 3px; }
 .cal__dots i { width: 6px; height: 6px; border-radius: 50%; }
-.dot-person { background: var(--ballpoint); }
-.dot-event { background: var(--marigold); }
+.dot-person { background: var(--pen); }
+.dot-event { background: var(--foil); }
 .dot-task { background: var(--ink-soft); }
 @media (max-width: 640px) {
   .cal th { padding: 8px 0; text-align: center; letter-spacing: 0.04em; }
@@ -984,7 +944,7 @@ mark { background: var(--marigold-wash); color: inherit; border-radius: 3px; pad
 .cal-people li:first-child, .cal-events li:first-child { border-top: 0; padding-top: 0; }
 .cal-event { display: grid; grid-template-columns: 6.6rem minmax(0, 1fr); gap: 10px; align-items: baseline; }
 .cal-event a { font-weight: 600; overflow-wrap: anywhere; }
-.cal-event__time { font-size: 0.9rem; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.cal-event__time { font: 600 0.82rem/1.5 var(--font-ui); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
 .cal-day__actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
 .your-day .eyebrow { margin-top: 14px; }
 .your-day__links { margin: 12px 0 0; font-size: 0.92rem; }
@@ -1001,8 +961,8 @@ mark { background: var(--marigold-wash); color: inherit; border-radius: 3px; pad
 .task__title { flex: 1; min-width: 0; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
 .task__title:hover { text-decoration: underline; }
 .task.is-done .task__title { color: var(--ink-soft); text-decoration: line-through; }
-.task__due { font-size: 0.82rem; color: var(--ink-soft); white-space: nowrap; }
-.task.is-overdue .task__due { color: var(--danger); font-weight: 650; }
+.task__due { font: 500 0.74rem/1.4 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); white-space: nowrap; }
+.task.is-overdue .task__due { color: var(--danger); font-weight: 600; }
 .tickbox {
   display: grid;
   place-items: center;
@@ -1011,17 +971,18 @@ mark { background: var(--marigold-wash); color: inherit; border-radius: 3px; pad
   flex: none;
   padding: 0;
   border: 1.5px solid var(--ink-soft);
-  border-radius: 5px;
-  background: var(--paper);
+  border-radius: 3px;
+  background: var(--page);
   color: #fff;
   font-weight: 800;
   font-size: 0.85rem;
   cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
 }
 .tickbox:hover { border-color: var(--sent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sent) 18%, transparent); }
 .tickbox.is-done { background: var(--sent); border-color: var(--sent); }
 .tasks__done { margin-top: 16px; }
-.tasks__done summary { cursor: pointer; color: var(--ballpoint); font-weight: 550; }
+.tasks__done summary { cursor: pointer; color: var(--pen); font-weight: 600; }
 .tasks__done[open] summary { margin-bottom: 6px; }
 
 /* ------------------------------------------------------------- whatsapp */
@@ -1034,26 +995,59 @@ mark { background: var(--marigold-wash); color: inherit; border-radius: 3px; pad
   height: 264px;
   padding: 12px;
   background: #fff;
-  border-radius: 12px;
-  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  border: 1px solid var(--rule-strong);
 }
-.qr__wait { display: grid; place-items: center; color: #5b6082; text-align: center; font-weight: 550; }
+.qr__wait { display: grid; place-items: center; color: #5f6a63; text-align: center; font-weight: 600; }
 .steps { margin: 0; padding-left: 1.3em; max-width: 34ch; }
 .steps li + li { margin-top: 10px; }
 
 /* ---------------------------------------------------------------- sign in */
 
-.signin {
-  display: grid;
-  grid-template-columns: 200px minmax(0, 360px);
-  gap: 48px;
-  align-items: center;
-  justify-content: center;
+/* The diary, closed: the cover, and a page slipped in at the front. */
+.signin { display: grid; justify-content: center; grid-template-columns: minmax(0, 400px); gap: 0; }
+.signin__cover {
+  position: relative;
+  padding: 34px 34px 30px;
+  border-radius: 8px 8px 0 0;
+  background: var(--cover);
+  color: var(--foil);
+  text-align: center;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
 }
-.signin__form { display: grid; gap: 16px; margin: 0; }
-.signin__form h1 { font-size: 1.9rem; margin: 0; }
-.signin__tagline { margin: -10px 0 0; color: var(--ink-soft); }
-@media (max-width: 640px) {
-  .signin { grid-template-columns: 1fr; gap: 28px; }
-  .signin .leaf { max-width: 150px; }
+.signin__cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.03) 0 1px, transparent 1px 4px);
+  pointer-events: none;
+}
+.signin__cover::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid color-mix(in srgb, var(--foil) 45%, transparent);
+  border-radius: 4px;
+  pointer-events: none;
+}
+.signin__mark { width: 64px; height: 64px; margin-bottom: 10px; }
+.signin__cover h1 { font: 400 2.2rem/1 var(--font-display); color: var(--foil); margin: 0; letter-spacing: 0.02em; }
+.signin__tagline { margin: 10px 0 0; font: 400 0.95rem/1.4 var(--font-ml); color: color-mix(in srgb, var(--foil) 80%, #fff); }
+.signin__form {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 26px 34px 28px;
+  background: var(--page);
+  border-radius: 0 0 3px 3px;
+  box-shadow: var(--page-shadow);
+}
+.signin .day--small { justify-self: start; }
+
+/* ----------------------------------------------------------------- motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .nav a[aria-current="page"]::after, .day__num { animation: none; }
+  .button, .note-card, .tickbox { transition: none; }
 }

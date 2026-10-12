@@ -595,3 +595,22 @@ test("Settings: with Claude, a group can have every message count; without it, t
   assert.deepEqual(db.settings.get().captureEvery, [group]);
   db.settings.save({ captureChats: ["self"], captureEvery: [] });
 });
+
+test("the pages are a diary: the cover's icon and manifest are served, the day is printed and counted", async () => {
+  const manifest = await get("/static/manifest.webmanifest");
+  assert.equal(manifest.status, 200);
+  assert.equal(manifest.headers.get("content-type"), "application/manifest+json");
+  assert.equal((await manifest.json()).name, "Ormma");
+  assert.equal((await get("/static/apple-touch-icon.png")).headers.get("content-type"), "image/png");
+  assert.equal((await get("/static/favicon.svg")).headers.get("content-type"), "image/svg+xml");
+  assert.match((await get("/login")).headers.get("content-security-policy"), /manifest-src 'self'/);
+
+  const cookie = await signIn();
+  const home = await (await get("/", cookie)).text();
+  assert.match(home, /<a class="brand" href="\/"><img class="brand__mark" src="\/static\/favicon.svg" alt="" width="30" height="30">/);
+  assert.match(home, /<a href="\/" aria-current="page">Today<\/a>/);
+  assert.match(home, /<p class="day__count" aria-hidden="true">Day \d{1,3} · \d{1,3} left<\/p>/);
+  assert.match(home, /<span class="day__ml" lang="ml">(ഞായർ|തിങ്കൾ|ചൊവ്വ|ബുധൻ|വ്യാഴം|വെള്ളി|ശനി)<\/span>/);
+  assert.match(home, /<h2 id="messages-title">Messages<\/h2>/);
+  assert.match(await (await get("/calendar", cookie)).text(), /<nav class="months" aria-label="The months of \d{4}">(<a href="\/calendar\?month=\d{4}-\d{2}"[^>]*>[A-Z][a-z]{2}<span class="visually-hidden">[^<]*<\/span><\/a>){12}<\/nav>/);
+});
