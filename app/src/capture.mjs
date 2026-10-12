@@ -15,6 +15,10 @@
  *                                    an event "Choir moves", Saturday 18:00
  *   a reply of "delete" to "✅ Added to the calendar: *Doc* …"
  *                                    Doc taken off the calendar again
+ *   remind me to call Renjith        a reminder: at the morning time
+ *                                    (07:00 unless changed), the next morning
+ *   delete all calendar for this week
+ *                                    asked about first; done on a “yes”
  *
  * Days and times are read from the day the message was sent, in the app's
  * time zone — not the moment it is read, which can be hours later when this
@@ -26,8 +30,10 @@
  * bridge is told to let it go. Switched off in Settings, they are let go
  * unread. */
 
-import { DAY_MINUTES, MAX_TITLE, reminderLabel, shiftDay, timeRange } from "./calendar.mjs";
-import { daysInMonth, formatShortDate, fromIsoDate, isoDate, weekdayOf, zonedNow } from "./dates.mjs";
+import { readdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { DAY_MINUTES, MAX_TITLE, occurrencesBetween, reminderLabel, shiftDay, timeRange } from "./calendar.mjs";
+import { MONTHS, daysInMonth, formatShortDate, fromIsoDate, isoDate, parseTime, weekdayOf, zonedNow } from "./dates.mjs";
 
 const MONTH = "(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?";
 const MONTH_NUMBER = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
@@ -209,6 +215,9 @@ export function readCapture({ text, quoted, sent_at: sentAt, sender = null }, { 
 export function renderCaptureReply(item) {
   const short = (day) => formatShortDate(fromIsoDate(day));
   const by = item.sender ? ` (from ${item.sender})` : "";
+  if (item.reminder) {
+    return [`⏰ Reminder set: *${item.title}*${by}`, `${short(item.day)}, ${item.time}`, "", "Not right? Reply “delete” to this, or change it in Wish Calendar → Calendar."].join("\n");
+  }
   if (item.kind === "event") {
     const days = item.endDay ? `${short(item.day)} – ${short(item.endDay)}` : short(item.day);
     const when = `${days}, ${timeRange(item) || "all day"}`;
@@ -235,6 +244,61 @@ function deletedLine(kind, item) {
   return `🗑️ Deleted: *${item.title}* — ${days}, ${timeRange(item) || "all day"}`;
 }
 
+/* "delete all calendar for this week", "clear this month", "delete all":
+ * which days, and what — events, tasks, or both. Only messages made of
+ * these words, so "delete the doc one" or "delete all photos" is not one;
+ * and a range or "all" is needed, so "delete" alone never is. → {range,
+ * kinds} or null. */
+const BULK_WORDS = /\b(?:all|everything|entire|whole|the|my|of|for|in|on|from|calendar|events?|schedules?|entries|appointments?|reminders?|tasks?|todos?|today|tomorrow|this|next|week|month)\b/g;
+export function readBulkDelete(text) {
+  const t = text.toLowerCase().replace(/['’]s\b/g, "").replace(/[.!]+$/, "").replace(/\s+/g, " ").trim();
+  const m = /^(?:please )?(?:delete|remove|clear|wipe|cancel)\b(.*)$/.exec(t);
+  if (!m || m[1].replace(BULK_WORDS, "").trim()) return null;
+  const range = /\b(today|tomorrow|this week|next week|this month|next month)\b/.exec(m[1])?.[1] ?? null;
+  if (!range && !/\b(?:all|everything|entire|whole)\b/.test(m[1])) return null;
+  const tasks = /\b(?:tasks?|todos?)\b/.test(m[1]);
+  const events = /\b(?:calendar|events?|schedules?|entries|appointments?|reminders?)\b/.test(m[1]);
+  return { range: range ?? "all", kinds: tasks && !events ? "tasks" : events && !tasks && !/\bcalendar\b/.test(m[1]) ? "events" : "both" };
+}
+
+/* The days a range covers, seen from `day` ('YYYY-MM-DD'), and how to say
+ * it: {from, to, label}; null for "all". Weeks run Sunday to Saturday, as
+ * the calendar shows them. */
+export function rangeOf(range, day) {
+  const short = (d) => formatShortDate(fromIsoDate(d));
+  const week = (start, name) => ({ from: start, to: shiftDay(start, 6), label: `${name} (${short(start)} – ${short(shiftDay(start, 6))})` });
+  const month = (year, m, name) => {
+    const from = isoDate({ year, month: m, day: 1 });
+    return { from, to: isoDate({ year, month: m, day: daysInMonth(year, m) }), label: `${name} (${MONTHS[m - 1]} ${year})` };
+  };
+  const { year, month: m } = fromIsoDate(day);
+  const sunday = shiftDay(day, -weekdayOf(fromIsoDate(day)));
+  switch (range) {
+    case "today":
+      return { from: day, to: day, label: `today (${short(day)})` };
+    case "tomorrow":
+      return { from: shiftDay(day, 1), to: shiftDay(day, 1), label: `tomorrow (${short(shiftDay(day, 1))})` };
+    case "this week":
+      return week(sunday, "this week");
+    case "next week":
+      return week(shiftDay(sunday, 7), "next week");
+    case "this month":
+      return month(year, m, "this month");
+    case "next month":
+      return m === 12 ? month(year + 1, 1, "next month") : month(year, m + 1, "next month");
+    default:
+      return null;
+  }
+}
+
+/* "remind me to call Renjith", "remind me at 5pm to call Renjith": a
+ * reminder. → what it is about, the rest of the message; null when the
+ * message is not one. */
+export function readReminder(text) {
+  const m = /^\s*(?:please\s+)?(?:set\s+a\s+)?remind(?:er)?(?:\s+me)?\b[\s,:]*(?:to\s+|about\s+|that\s+)?(.*)$/is.exec(text);
+  return m && m[1].trim() ? m[1].trim() : null;
+}
+
 /* The reminder a new event gets, as Settings says — when it can have it: an
  * all-day event only one a day or more ahead. */
 export function reminderFor(event, minutes) {
@@ -244,6 +308,13 @@ export function reminderFor(event, minutes) {
 
 export const POLL_MS = 15_000;
 const KEEP_DAYS = 31;
+/* "delete all …" waits this long for its "yes". */
+const CONFIRM_MS = 10 * 60_000;
+const YES = /^\s*(?:yes|y|yeah|yep|ok|okay|sure|confirm|do it|go ahead)\b|^\s*(?:\u{1F44D}|\u2705|\u2714)/iu;
+/* Copies of the database kept before "delete all …": the latest few. */
+const KEEP_COPIES = 10;
+const counted = (events, tasks) =>
+  [events ? `${events} ${events === 1 ? "event" : "events"}` : "", tasks ? `${tasks} ${tasks === 1 ? "task" : "tasks"}` : ""].filter(Boolean).join(" and ");
 /* A message with no 📅, in a group where every message counts, waits for
  * Claude while it cannot be reached — this long, then it is let go. */
 const WAIT_FOR_CLAUDE_MS = 6 * 60 * 60_000;
@@ -255,7 +326,7 @@ const LATER = Symbol("later");
 /* `claude`: claude.mjs's reader, when there is an API key; else null, and
  * 📅 messages are read by the rules above, and no group can have every
  * message count. */
-export function createCapture({ db, bridge, scheduler, log, claude = null, clock = () => new Date() }) {
+export function createCapture({ db, bridge, scheduler, log, claude = null, dataDir = null, clock = () => new Date() }) {
   let busy = false;
   let timer = null;
   let lastProblem = null;
@@ -294,11 +365,100 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, clock
     }
   }
 
+  /* The day a message was sent, and its minute of that day, in the app's
+   * time zone. */
+  function sentOn(command, settings) {
+    const t = zonedNow(new Date(command.sent_at), settings.timezone);
+    return { day: isoDate(t), minute: t.hour * 60 + t.minute };
+  }
+
+  /* "delete all …": counted, and asked about. Only where the owner alone
+   * — or with a phone of their own — writes: Message yourself, or a group
+   * where every message counts. Repeating events are kept in a range: one
+   * week's or month's of them is all of them. */
+  function askBulk(command, bulk, settings) {
+    if (!(command.chat === "self" || everyOf(settings).includes(command.chat_id))) {
+      return { title: "Delete all", text: "“Delete all …” works in Message yourself, and in a group where every message counts — not here." };
+    }
+    const span = rangeOf(bulk.range, sentOn(command, settings).day);
+    const inRange = span ? db.events.between(span.from, span.to) : db.events.all();
+    const events = bulk.kinds === "tasks" ? [] : span ? inRange.filter((e) => !e.repeat && e.day >= span.from && e.day <= span.to) : inRange;
+    const kept = bulk.kinds === "tasks" || !span ? [] : inRange.filter((e) => e.repeat && occurrencesBetween(e, span.from, span.to).length);
+    const tasks = bulk.kinds === "events" ? [] : span ? db.tasks.dueBetween(span.from, span.to) : db.tasks.all();
+    const label = span ? span.label : "everything on the calendar";
+    const keptLine = kept.length ? [`Repeating events are kept: ${kept.map((e) => e.title).join(", ")} — delete them in Wish Calendar → Calendar.`] : [];
+    if (!events.length && !tasks.length) return { title: "Delete all", text: [`Nothing to delete — ${label}.`, ...keptLine].join("\n") };
+    db.bulkDeletes.create({ messageId: command.id, label, events: events.map((e) => e.id), tasks: tasks.map((t) => t.id) }, clock().toISOString());
+    return {
+      title: "Delete all",
+      text: [`⚠️ Delete ${counted(events.length, tasks.length)} — ${label}?`, "Reply *yes* to this message within 10 minutes to delete them.", ...keptLine].join("\n"),
+    };
+  }
+
+  /* A copy of the database before "delete all …", next to it — the latest
+   * KEEP_COPIES of them. → its name, or null. */
+  function keepCopy() {
+    if (!dataDir) return null;
+    const name = `before-delete-${clock().toISOString().replace(/[:.]/g, "-")}.db`;
+    try {
+      db.snapshot(join(dataDir, name));
+      const copies = readdirSync(dataDir).filter((f) => /^before-delete-.*\.db$/.test(f)).sort();
+      for (const old of copies.slice(0, -KEEP_COPIES)) rmSync(join(dataDir, old), { force: true });
+      return name;
+    } catch (err) {
+      log.warn({ err: err.message }, "📅 messages: no copy could be kept before deleting");
+      return null;
+    }
+  }
+
+  /* The answer to "⚠️ Delete …?": "yes" within the ten minutes deletes
+   * what was counted then; anything else, nothing. */
+  function confirmBulk(command, bulk) {
+    const at = clock().toISOString();
+    if (bulk.done_at) return { title: "Delete all", text: bulk.outcome === "deleted" ? "Those were deleted already." : "Nothing was deleted then — send it again to start over." };
+    if (!YES.test(command.text)) {
+      db.bulkDeletes.finish(bulk.message_id, "cancelled", at);
+      return { title: "Delete all", text: "Nothing was deleted." };
+    }
+    if (clock().getTime() - Date.parse(bulk.created_at) > CONFIRM_MS) {
+      db.bulkDeletes.finish(bulk.message_id, "expired", at);
+      return { title: "Delete all", text: "That was more than 10 minutes ago, so nothing was deleted. Send it again to start over." };
+    }
+    const copy = keepCopy();
+    const done = db.transaction(() => {
+      const events = bulk.events.filter((id) => db.events.remove(id)).length;
+      const tasks = bulk.tasks.filter((id) => db.tasks.remove(id)).length;
+      db.bulkDeletes.finish(bulk.message_id, "deleted", at);
+      return { events, tasks };
+    });
+    log.info({ message_id: command.id, ...done, copy }, "📅 messages: deleted all asked for");
+    return { title: "Delete all", text: `🗑️ Deleted ${counted(done.events, done.tasks) || "nothing — they were gone already"} — ${bulk.label}.` };
+  }
+
+  /* "remind me to call Renjith": an event at the morning time (07:00 unless
+   * changed) — the next morning, without a day — with its reminder at the
+   * time. A day or a time in it, read by Claude or the rules, wins. */
+  async function remindItem(command, about, settings) {
+    const where = whereOf(command);
+    const asked = await askClaude(command, settings);
+    const reading = asked.reading && asked.reading.kind !== "none" ? asked.reading : readCapture({ ...command, text: about }, { timeZone: settings.timezone, where });
+    const morning = settings.morningTime;
+    const sent = sentOn(command, settings);
+    const day = reading.kind === "event" ? reading.day : reading.due ?? (sent.minute < parseTime(morning) ? sent.day : shiftDay(sent.day, 1));
+    const time = reading.kind === "event" && reading.time ? reading.time : morning;
+    const raw = reading.title && reading.title !== "Untitled" ? reading.title : about;
+    const title = raw.charAt(0).toUpperCase() + raw.slice(1);
+    return { kind: "event", reminder: true, title, day, endDay: null, time, endTime: "", remind: 0, notes: notesFor(command, where), sender: command.sender ?? null, why: null };
+  }
+
   /* A reply to one of the app's own "✅ Added …": "delete" takes that off
-   * the calendar again; anything else is not read as something new. The
-   * answer, or null to let it go unanswered. */
+   * the calendar again; anything else is not read as something new. A
+   * reply to its "⚠️ Delete …?" is the answer to that. The answer, or null
+   * to let it go unanswered. */
   function answerReply(command, answered) {
     db.captures.record(command);
+    const bulk = db.bulkDeletes.get(answered.key.replace(/^capture:/, ""));
+    if (bulk) return confirmBulk(command, bulk);
     const added = db.captures.get(answered.key.replace(/^capture:/, ""));
     if (!added?.kind || !added.item_id) return null; // an answer to a delete, say
     const title = answered.title ?? "it";
@@ -324,6 +484,13 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, clock
     }
     const answered = command.quoted_id ? db.deliveries.captureAnswer(command.quoted_id) : null;
     if (answered) return { answer: answerReply(command, answered) };
+    const bulk = readBulkDelete(command.text);
+    if (bulk) {
+      db.captures.record(command);
+      return { answer: askBulk(command, bulk, settings) };
+    }
+    const about = readReminder(command.text);
+    if (about) return addItem(command, await remindItem(command, about, settings));
     const marked = command.marked !== false;
     const where = whereOf(command);
     const asked = await askClaude(command, settings);
@@ -345,6 +512,12 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, clock
       item = { ...item, notes: notesFor(command, where), sender: command.sender ?? null, why: null };
     }
     if (item.kind === "event") item = { ...item, remind: reminderFor(item, settings.defaultRemind) };
+    return addItem(command, item);
+  }
+
+  /* An item on the calendar, and the message it came from marked as taken
+   * — both or neither. */
+  function addItem(command, item) {
     return db.transaction(() => {
       const id =
         item.kind === "event"

@@ -133,6 +133,7 @@ export function settingsRoutes({ db, bridge, scheduler, log, assets, auth, throt
       captureChats: form.has("captureShown") ? [...new Set(form.all("captureChat"))].filter((c) => c === "self" || GROUP_JID.test(c)) : before.captureChats,
       captureEvery: form.has("captureShown") ? [...new Set(form.all("captureEvery"))].filter((c) => GROUP_JID.test(c)) : before.captureEvery,
       defaultRemind: form.has("defaultRemind") ? (form.get("defaultRemind") === "" ? null : Number(form.get("defaultRemind"))) : before.defaultRemind,
+      morningTime: form.has("morningTime") ? form.get("morningTime") : before.morningTime,
       countryCode: form.get("countryCode").replace(/^\+/, ""),
     };
     const errors = {};
@@ -152,6 +153,7 @@ export function settingsRoutes({ db, bridge, scheduler, log, assets, auth, throt
     const calendarTo = readSendTo(values.calendarTo, myPhone.phone, { direct: "your", self: true });
     if (calendarTo.error && !myPhone.error) errors.calendarTo = calendarTo.error;
     if (values.defaultRemind !== null && !REMINDERS.some(([m]) => m === values.defaultRemind)) errors.defaultRemind = "Choose a reminder from the list.";
+    if (parseTime(values.morningTime) === null) errors.morningTime = "Enter a time like 07:00.";
     if (Object.keys(errors).length) return renderSettings(ctx, { status: 422, values, errors });
 
     db.settings.save({
