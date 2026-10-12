@@ -17,6 +17,9 @@
  *                                    Doc taken off the calendar again
  *   remind me to call Renjith        a reminder: at the morning time
  *                                    (07:00 unless changed), the next morning
+ *   📝 Coffee with Tom, he's well    a line on the day's journal page, with
+ *                                    the time it was sent — the next one
+ *                                    goes below it: the day's notes, merged
  *   delete all calendar for this week
  *                                    asked about first; done on a “yes”
  *
@@ -309,6 +312,14 @@ export function readReminder(text) {
   return m && m[1].trim() ? m[1].trim() : null;
 }
 
+/* "note: …", "diary …", "journal: …": a line for the day's page said in
+ * words rather than with the 📝 — in a group where every message counts.
+ * → the line, or null. */
+export function readNotePrefix(text) {
+  const m = /^\s*(?:note|notes|diary|journal|memo)\b[\s:–—-]*(.*)$/is.exec(text);
+  return m && m[1].trim() ? m[1].trim() : null;
+}
+
 /* The reminder a new event gets, as Settings says — when it can have it: an
  * all-day event only one a day or more ahead. */
 export function reminderFor(event, minutes) {
@@ -446,13 +457,34 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     return { title: "Delete all", text: `🗑️ Deleted ${counted(done.events, done.tasks) || "nothing — they were gone already"} — ${bulk.label}.` };
   }
 
+  /* "today’s", or "Wed 8 Oct’s": a page, named from today. */
+  const pageOf = (day) => (day === isoDate(scheduler.today().date) ? "today’s" : `${formatShortDate(fromIsoDate(day))}’s`);
+
+  /* A 📝 message, written on the page of the day it was sent, under what
+   * is there: the time it was sent and its words — and, for a reply, the
+   * message it replied to, quoted. The day's notes end up on one page, in
+   * the order they came. → the answer */
+  function addNote(command, text, settings) {
+    const { day, minute } = sentOn(command, settings);
+    const at = `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+    const words = [text.trim(), command.quoted?.trim() ? `“${command.quoted.trim()}”` : ""].filter(Boolean).join("\n");
+    const line = `${at} — ${words}`;
+    const page = db.transaction(() => {
+      const id = db.journal.append(day, line);
+      db.captures.record(command, "note", id, line);
+      return id;
+    });
+    log.info({ message_id: command.id, page }, "📝 message written on the day's page"); // never its words
+    return { answer: { title: "Note", text: `📓 Noted on ${pageOf(day)} page (${at}).\nReply “delete” to take it off.` } };
+  }
+
   /* "remind me to call Renjith": an event at the morning time (07:00 unless
    * changed) — the next morning, without a day — with its reminder at the
    * time. A day or a time in it, read by Claude or the rules, wins. */
   async function remindItem(command, about, settings) {
     const where = whereOf(command);
     const asked = await askClaude(command, settings);
-    const reading = asked.reading && asked.reading.kind !== "none" ? asked.reading : readCapture({ ...command, text: about }, { timeZone: settings.timezone, where });
+    const reading = asked.reading && !["none", "note"].includes(asked.reading.kind) ? asked.reading : readCapture({ ...command, text: about }, { timeZone: settings.timezone, where });
     const morning = settings.morningTime;
     const sent = sentOn(command, settings);
     const day = reading.kind === "event" ? reading.day : reading.due ?? (sent.minute < parseTime(morning) ? sent.day : shiftDay(sent.day, 1));
@@ -485,13 +517,22 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
    * the calendar again; anything else is not read as something new. A
    * reply to its "⚠️ Delete …?" is the answer to that. The answer, or null
    * to let it go unanswered. */
-  function answerReply(command, answered) {
+  function answerReply(command, answered, settings) {
     db.captures.record(command);
     const bulk = db.bulkDeletes.get(answered.key.replace(/^capture:/, ""));
     if (bulk) return confirmBulk(command, bulk);
     const added = db.captures.get(answered.key.replace(/^capture:/, ""));
     if (!added?.kind) return null; // an answer to a delete, say
     const title = answered.title ?? "it";
+    if (added.kind === "note") {
+      // A line on a page: "delete" takes it off, if it is still there as
+      // it was written.
+      if (!isDelete(command.text)) return { title, text: "Only “delete” works as a reply to that. To change the page, open Ormma → Notes → Journal." };
+      const { day } = sentOn(added, settings);
+      const gone = Boolean(added.added) && db.journal.removeChunk(day, added.added);
+      log.info({ message_id: command.id, gone }, "📝 message: a line taken off by a reply");
+      return { title, text: gone ? `🗑️ Taken off ${pageOf(day)} page.` : `That line is no longer on ${pageOf(day)} page as it was written — change the page in Ormma → Notes → Journal.` };
+    }
     if (!isDelete(command.text) && !isDone(command.text)) {
       return { title, text: `Only “delete” works as a reply to that. To change *${title}*, open Ormma → Calendar.` };
     }
@@ -515,10 +556,16 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
       db.captures.record(command);
       return null;
     }
+    // 📝: for the diary, whatever else it says — a reply of 📝 to a message
+    // keeps that message on the page.
+    if (command.mark === "note") return addNote(command, command.text, settings);
     const answered = command.quoted_id ? db.deliveries.captureAnswer(command.quoted_id) : null;
-    if (answered) return { answer: answerReply(command, answered) };
+    if (answered) return { answer: answerReply(command, answered, settings) };
     const reminded = command.quoted_id ? db.deliveries.eventReminder(command.quoted_id) : null;
     if (reminded) return { answer: answerReminder(command, reminded) };
+    const everyMessage = command.marked === false && everyOf(settings).includes(command.chat_id);
+    const noted = everyMessage ? readNotePrefix(command.text) : null;
+    if (noted !== null) return addNote(command, noted, settings);
     const bulk = readBulkDelete(command.text);
     if (bulk) {
       db.captures.record(command);
@@ -530,12 +577,14 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     const where = whereOf(command);
     const asked = await askClaude(command, settings);
     let item = asked.reading ?? null;
+    // Not an appointment or a to-do, but something to keep: the diary.
+    if (!marked && item?.kind === "note") return addNote(command, command.text, settings);
     if (!marked && (asked.unusable || item?.kind === "none")) {
       // Nothing for the calendar — or nothing Claude could make of it.
       db.captures.record(command);
       return null;
     }
-    if (!item || item.kind === "none") {
+    if (!item || item.kind === "none" || item.kind === "note") {
       if (!marked) {
         // Nothing reads a message without the 📅 but Claude: wait for it.
         if (clock().getTime() - Date.parse(command.sent_at) < WAIT_FOR_CLAUDE_MS) return LATER;

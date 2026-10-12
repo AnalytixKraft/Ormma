@@ -48,6 +48,7 @@ test("Claude Haiku 5.5 is asked for strict JSON, with the message and when it wa
   assert.equal(params.output_config.effort, "low");
   assert.equal(params.output_config.format.type, "json_schema");
   assert.deepEqual(params.output_config.format.schema.required, ["kind", "title", "day", "end_day", "time", "end_time"]);
+  assert.deepEqual(params.output_config.format.schema.properties.kind.enum, ["event", "task", "note", "none"]);
   for (const sampling of ["temperature", "top_p", "top_k"]) assert.equal(sampling in params, false, sampling);
   assert.equal(params.messages.at(-1).role, "user", "no prefill");
   const sent = params.messages[0].content;
@@ -61,6 +62,7 @@ test("Claude Haiku 5.5 is asked for strict JSON, with the message and when it wa
 test("what Claude says is checked before it is used", () => {
   const ok = (fields) => checkReading(answer(fields), "2026-10-08");
   assert.deepEqual(ok({ kind: "none" }), { kind: "none" });
+  assert.deepEqual(ok({ kind: "note", title: "ignored", day: "2026-02-30" }), { kind: "note" }, "a note is the message itself: nothing else of the answer is used");
   assert.deepEqual(ok({ kind: "task", title: " Pay   rent ", day: "2026-10-09" }), { kind: "task", title: "Pay rent", due: "2026-10-09" });
   assert.deepEqual(ok({ kind: "task", title: "", day: "" }), { kind: "task", title: "Untitled", due: null });
   assert.deepEqual(ok({ title: "Trip", day: "2026-10-10", end_day: "2026-10-13" }), { kind: "event", title: "Trip", day: "2026-10-10", endDay: "2026-10-13", time: "", endTime: "" });

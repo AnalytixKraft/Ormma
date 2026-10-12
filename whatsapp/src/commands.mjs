@@ -1,9 +1,11 @@
 /* The one kind of inbound message the bridge acts on: a "📅 message" — one
- * that starts with 📅 or 📆, in a chat the owner chose for them in the app's
- * Settings → Calendar: a group they ticked, where ANYONE in it may send one
- * (the owner's choice: a family's or a team's shared calendar), or the
- * linked account's own chat (Message yourself, "self"), where only it
- * writes. The app turns each into an event or a task.
+ * that starts with 📅 or 📆 (for the calendar) or 📝 (for the diary), in a
+ * chat the owner chose for them in the app's Settings → Calendar: a group
+ * they ticked, where ANYONE in it may send one (the owner's choice: a
+ * family's or a team's shared calendar), or the linked account's own chat
+ * (Message yourself, "self"), where only it writes. The app turns each into
+ * an event, a task, or a line on the day's journal page (`mark` says which
+ * mark it had).
  *
  * A chosen group can also be one where EVERY message counts, mark or not —
  * the owner's choice, for a group kept for the calendar: then each message
@@ -39,12 +41,15 @@
 
 import { isJidGroup, jidNormalizedUser, normalizeMessageContent, toNumber } from "@whiskeysockets/baileys";
 
-/* 📅 (calendar) or 📆 (tear-off calendar), with or without the emoji
- * variation selector. Not 🗓️ (spiral calendar): "Your day" starts with it. */
-export const MARK = /^\s*[\u{1F4C5}\u{1F4C6}]️?\s*/u;
-/* Any calendar emoji, anywhere: a message meant as a 📅 message that is not
- * one, said so in the log (never the message). */
-const CALENDARS = /[\u{1F4C5}\u{1F4C6}\u{1F5D3}]/u;
+/* 📅 (calendar) or 📆 (tear-off calendar) for the calendar, 📝 (memo) for
+ * the diary — with or without the emoji variation selector. Not 🗓️ (spiral
+ * calendar): "Your day" starts with it; nor 📓, which the app's own answer
+ * to a note starts with. */
+export const MARK = /^\s*([\u{1F4C5}\u{1F4C6}]|\u{1F4DD})\uFE0F?\s*/u;
+const markOf = (text) => (MARK.exec(text)?.[1] === "\u{1F4DD}" ? "note" : "calendar");
+/* Any such emoji, anywhere: a message meant as a marked one that is not,
+ * said so in the log (never the message). */
+const CALENDARS = /[\u{1F4C5}\u{1F4C6}\u{1F5D3}\u{1F4DD}]/u;
 
 const MAX_TEXT = 2_000;
 /* A 📅 message delivered later than this after it was sent (the bridge was
@@ -94,7 +99,7 @@ export function readMessage(msg, mine, chats, every = new Set(), now = Date.now(
   const marked = MARK.test(text);
   if (!marked && !every.has(chatId)) {
     if (!CALENDARS.test(text)) return null;
-    return { skipped: /^\s*\u{1F5D3}/u.test(text) ? "it starts with 🗓️, which is not 📅 or 📆" : "the 📅 is not at the start" };
+    return { skipped: /^\s*\u{1F5D3}/u.test(text) ? "it starts with 🗓️, which is not 📅 or 📆" : "the 📅 or 📝 is not at the start" };
   }
   const sentAt = toNumber(msg.messageTimestamp) * 1000;
   if (!Number.isFinite(sentAt) || sentAt <= 0) return null;
@@ -112,6 +117,7 @@ export function readMessage(msg, mine, chats, every = new Set(), now = Date.now(
       quoted: quotedText?.trim() ? clip(quotedText.trim()) : null,
       quoted_id: typeof context?.stanzaId === "string" && context.stanzaId ? context.stanzaId.slice(0, 128) : null,
       marked,
+      mark: marked ? markOf(text) : null,
       from_me: fromMe,
       sender: fromMe ? null : nameOf(msg.pushName),
     },

@@ -316,6 +316,39 @@ const MIGRATIONS = [
     UPDATE captures SET item_id = NULL WHERE kind = 'task' AND item_id = old.id;
   END;
   `,
+  // 11 — a 📝 message is a line on the day's journal page (capture.mjs):
+  // kind 'note', item_id the page's, and `added` what was written on it,
+  // so a "delete" in reply can take that line off again. SQLite cannot
+  // change a CHECK, hence the new table; the two triggers name captures,
+  // so they go first and come back after, or the rename is refused.
+  `
+  DROP TRIGGER events_forgotten;
+  DROP TRIGGER tasks_forgotten;
+  CREATE TABLE captures_11 (
+    message_id TEXT    PRIMARY KEY,
+    chat_id    TEXT    NOT NULL,
+    sent_at    TEXT    NOT NULL,
+    text       TEXT    NOT NULL,
+    quoted     TEXT,
+    kind       TEXT    CHECK (kind IS NULL OR kind IN ('event', 'task', 'note')),
+    item_id    INTEGER,
+    added      TEXT,
+    created_at TEXT    NOT NULL DEFAULT (${NOW})
+  );
+  INSERT INTO captures_11 (message_id, chat_id, sent_at, text, quoted, kind, item_id, created_at)
+    SELECT message_id, chat_id, sent_at, text, quoted, kind, item_id, created_at FROM captures;
+  DROP TABLE captures;
+  ALTER TABLE captures_11 RENAME TO captures;
+  CREATE TRIGGER events_forgotten AFTER DELETE ON events BEGIN
+    UPDATE captures SET item_id = NULL WHERE kind = 'event' AND item_id = old.id;
+  END;
+  CREATE TRIGGER tasks_forgotten AFTER DELETE ON tasks BEGIN
+    UPDATE captures SET item_id = NULL WHERE kind = 'task' AND item_id = old.id;
+  END;
+  CREATE TRIGGER notes_forgotten AFTER DELETE ON notes BEGIN
+    UPDATE captures SET item_id = NULL WHERE kind = 'note' AND item_id = old.id;
+  END;
+  `,
 ];
 
 function migrate(db) {
@@ -707,6 +740,22 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
     count: () => q("SELECT COUNT(*) AS n FROM notes WHERE kind = 'journal'").get().n,
     /* The days from `from` through `to` that have a page. */
     daysBetween: (from, to) => q("SELECT day FROM notes WHERE kind = 'journal' AND day BETWEEN ? AND ? ORDER BY day").all(from, to).map((r) => r.day),
+    /* A line — a paragraph — written at the end of the day's page, under
+     * what is there. → the page's id */
+    append(day, chunk) {
+      const page = journal.get(day);
+      journal.save(day, page ? `${page.body.replace(/\s+$/, "")}\n\n${chunk}` : chunk);
+      return journal.get(day).id;
+    },
+    /* That line taken off the page again, if it is still there as it was
+     * written; the page goes with it when nothing else is on it. → whether
+     * it was */
+    removeChunk(day, chunk) {
+      const page = journal.get(day);
+      if (!page || !page.body.includes(chunk)) return false;
+      journal.save(day, page.body.replace(chunk, "").replace(/\n{3,}/g, "\n\n").trim());
+      return true;
+    },
   };
 
   /* The calendar. Which days an event falls on is calendar.mjs's to say;
@@ -769,8 +818,9 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
   const captures = {
     has: (messageId) => Boolean(q("SELECT 1 FROM captures WHERE message_id = ?").get(messageId)),
     get: (messageId) => q("SELECT * FROM captures WHERE message_id = ?").get(messageId) ?? null,
-    record: ({ id, chat_id: chatId, sent_at: sentAt, text, quoted }, kind = null, itemId = null) =>
-      q("INSERT OR IGNORE INTO captures (message_id, chat_id, sent_at, text, quoted, kind, item_id) VALUES (?, ?, ?, ?, ?, ?, ?)").run(
+    /* `added`: for a note, the line written on the page. */
+    record: ({ id, chat_id: chatId, sent_at: sentAt, text, quoted }, kind = null, itemId = null, added = null) =>
+      q("INSERT OR IGNORE INTO captures (message_id, chat_id, sent_at, text, quoted, kind, item_id, added) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(
         id,
         chatId,
         sentAt,
@@ -778,6 +828,7 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
         quoted,
         kind,
         itemId,
+        added,
       ).changes > 0,
     /* Kept a month: long after the bridge has let the message go. */
     prune: (before) => q("DELETE FROM captures WHERE created_at < ?").run(before).changes,

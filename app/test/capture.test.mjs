@@ -463,3 +463,62 @@ test("a reply to an old ✅ never reaches what has the same id now", async () =>
   assert.equal(bridge.sent.at(-1).text, "*Dentist* was deleted already.");
   assert.ok(db.events.get(lunch.id), "Lunch is untouched");
 });
+
+test("a 📝 message is a line on the day's page — the time it was sent, its words — under what is there; the next goes below; “delete” takes it off", async () => {
+  const { db, bridge, capture } = setup([
+    command("A", "Coffee with Tom, he’s doing well", { mark: "note" }),
+    inFamily("B", "", { mark: "note", quoted: "Choir moves to Sat 6pm" }),
+  ]);
+  db.journal.save("2026-10-08", "Slept badly.  \n");
+  assert.equal(await capture.poll(), 0, "nothing on the calendar");
+  assert.equal(db.journal.get("2026-10-08").body, "Slept badly.\n\n10:00 — Coffee with Tom, he’s doing well\n\n10:00 — “Choir moves to Sat 6pm”");
+  assert.deepEqual(db.journal.get("2026-10-08").tags, []);
+  assert.deepEqual(
+    bridge.sent.map((s) => [s.key, s.text]),
+    [
+      ["capture:A", "📓 Noted on today’s page (10:00).\nReply “delete” to take it off."],
+      ["capture:B", "📓 Noted on today’s page (10:00).\nReply “delete” to take it off."],
+    ],
+  );
+  assert.equal(db.events.count() + db.tasks.open().length, 0);
+  assert.deepEqual(bridge.acked, ["A", "B"]);
+
+  bridge.held = [command("C", "delete", { quoted_id: db.deliveries.get("capture:A").message_id }), command("D", "thanks", { quoted_id: db.deliveries.get("capture:B").message_id })];
+  await capture.poll();
+  assert.equal(db.journal.get("2026-10-08").body, "Slept badly.\n\n10:00 — “Choir moves to Sat 6pm”");
+  assert.deepEqual(bridge.sent.slice(2).map((s) => s.text), ["🗑️ Taken off today’s page.", "Only “delete” works as a reply to that. To change the page, open Ormma → Notes → Journal."]);
+  bridge.held = [command("E", "delete", { quoted_id: db.deliveries.get("capture:A").message_id })];
+  await capture.poll();
+  assert.match(bridge.sent.at(-1).text, /^That line is no longer on today’s page/);
+});
+
+test("a note from another day goes on that day's page, by the time it was sent there", async () => {
+  const { db, bridge, capture } = setup([command("A", "Long walk by the lake #health", { mark: "note", sent_at: "2026-10-07T13:40:00.000Z" })]);
+  await capture.poll();
+  assert.equal(db.journal.get("2026-10-07").body, "19:10 — Long walk by the lake #health");
+  assert.deepEqual(db.journal.get("2026-10-07").tags, ["health"]);
+  assert.equal(bridge.sent[0].text, "📓 Noted on Wed 7 Oct’s page (19:10).\nReply “delete” to take it off.");
+});
+
+test("in a group where every message counts, “note:” writes on the page without Claude, and Claude writes down what reads like a diary entry", async () => {
+  const claude = fakeClaude({
+    "Long day, the meeting ran late and the rain never stopped": { kind: "note" },
+    "Thanks all!": { kind: "none" },
+    "Dentist Tue 10am": { kind: "note" },
+  });
+  const { db, bridge, capture } = setup(
+    [
+      inFamily("A", "note: the plumber comes Thursday", { marked: false }),
+      inFamily("B", "Long day, the meeting ran late and the rain never stopped", { marked: false }),
+      inFamily("C", "Thanks all!", { marked: false }),
+      command("D", "Dentist Tue 10am", { mark: "calendar" }),
+    ],
+    { captureEvery: [FAMILY], calendarTo: FAMILY },
+    claude,
+  );
+  assert.equal(await capture.poll(), 1, "the dentist");
+  assert.equal(db.journal.get("2026-10-08").body, "10:00 — the plumber comes Thursday\n\n10:00 — Long day, the meeting ran late and the rain never stopped");
+  assert.deepEqual(claude.asked, ["B", "C", "D"], "a note said in words is not read by Claude");
+  assert.equal(db.events.between("2026-10-13", "2026-10-13")[0].title, "Dentist", "a 📅 message Claude calls a note is read by the rules instead");
+  assert.deepEqual(bridge.sent.map((s) => [s.key, s.chatId]), [["capture:A", FAMILY], ["capture:B", FAMILY], ["capture:D", FAMILY]], "chat gets no answer");
+});
