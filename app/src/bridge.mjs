@@ -118,6 +118,6 @@ export function createBridge({ url, token, fetchImpl = globalThis.fetch }) {
     // count in, as the bridge has them: {commands, chats}.
     commands: () => call("GET", "/commands", { timeoutMs: 10_000 }),
     ackCommands: (ids) => call("POST", "/commands/ack", { body: { ids }, timeoutMs: 10_000 }),
-    setCommandChats: (chats) => call("POST", "/commands/chats", { body: { chats }, timeoutMs: 10_000 }),
+    setCommandChats: (chats, every = []) => call("POST", "/commands/chats", { body: { chats, every }, timeoutMs: 10_000 }),
   };
 }
