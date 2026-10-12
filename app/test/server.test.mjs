@@ -75,7 +75,9 @@ test("the sign-in page carries the security headers", async () => {
   assert.equal(res.status, 200);
   assert.match(res.headers.get("content-security-policy"), /script-src 'self'/);
   assert.equal(res.headers.get("x-frame-options"), "DENY");
-  assert.match(await res.text(), /Sign in/);
+  const page = await res.text();
+  assert.match(page, /Sign in/);
+  assert.match(page, /<h1>Ormma<\/h1>\s*<p class="signin__tagline">ഓർമ്മ — your diary and reminders<\/p>/);
 });
 
 test("a wrong password is refused; the right one signs in", async () => {
@@ -204,13 +206,13 @@ test("the default messages can be edited from the People page", async () => {
   assert.match(table, new RegExp(`name="message_${id}"[^>]*data-default-message="Happy birthday, Vivek!"`));
 });
 
-test("WhatsApp lives in Settings now; the app is called Wish Calendar", async () => {
+test("WhatsApp lives in Settings now; the app is called Ormma", async () => {
   const cookie = await signIn();
   const old = await get("/whatsapp", cookie);
   assert.equal(old.status, 303);
   assert.equal(old.headers.get("location"), "/settings#whatsapp");
   const page = await (await get("/settings", cookie)).text();
-  assert.match(page, /<title>Settings · Wish Calendar<\/title>/);
+  assert.match(page, /<title>Settings · Ormma<\/title>/);
   assert.match(page, /<section class="card whatsapp" id="whatsapp" data-wa-state="idle"/);
   assert.match(page, /Link a phone/);
   assert.doesNotMatch(page, /href="\/whatsapp"/, "no menu entry for a WhatsApp page");
@@ -333,7 +335,7 @@ test("Settings: where alerts go, a test alert that says why it did not go, and a
   assert.equal(test.headers.get("location"), "/settings");
   assert.match(flashOf(test), /^The test alert was not sent: WhatsApp is not connected/);
 
-  db.alerts.create({ key: "alert:missed:2026-01-02", day: "2026-01-03", text: "⚠️ *Wish Calendar: a wish was not sent on Fri 2 Jan*" }, new Date().toISOString());
+  db.alerts.create({ key: "alert:missed:2026-01-02", day: "2026-01-03", text: "⚠️ *Ormma: a wish was not sent on Fri 2 Jan*" }, new Date().toISOString());
   const today = await (await get("/", cookie)).text();
   assert.match(today, /alerts to the linked phone/);
   assert.match(today, /<td>Alert: a wish was not sent on Fri 2 Jan<\/td>\s*<td>—<\/td>\s*<td><span class="tick tick--due" aria-hidden="true">◷<\/span> Waiting to be sent<\/td>/);

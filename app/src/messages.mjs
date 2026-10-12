@@ -1,4 +1,4 @@
-/* What the app sends: a wish for a birthday or an anniversary, from a
+/* What Ormma sends: a wish for a birthday or an anniversary, from a
  * template, the daily reminder to the organiser, and the calendar's messages
  * to you — "Your day" each morning, and an event's reminder. WhatsApp
  * formatting applies: *bold*, _italic_, ~strike~. */
@@ -163,8 +163,8 @@ export function renderEventReminder({ event, start, date }) {
 
 /* When a wish is not sent, the app says so on WhatsApp: which, to where,
  * and why. An alert's first line is its title; the Today page shows it. */
-const alertTitle = (what) => `⚠️ *Wish Calendar: ${what}*`;
-const ALERT_TITLE = /^⚠️ \*Wish Calendar: (.+)\*$/;
+const alertTitle = (what) => `⚠️ *Ormma: ${what}*`;
+const ALERT_TITLE = /^⚠️ \*(?:Ormma|Wish Calendar): (.+)\*$/; // the app's name before
 
 /* "a wish was not sent", from an alert's text. */
 export function alertSummary(text) {
@@ -202,7 +202,7 @@ export function renderRefusedAlert({ items, maxAttempts }) {
       left ? `It is tried again every 10 minutes, ${left} more ${left === 1 ? "time" : "times"}.` : "It won’t be tried again on its own.",
     );
   }
-  lines.push("", `To send ${items.length === 1 ? "it" : "them"} now: Wish Calendar → Today → Retry now.`);
+  lines.push("", `To send ${items.length === 1 ? "it" : "them"} now: Ormma → Today → Retry now.`);
   return lines.join("\n");
 }
 
@@ -230,7 +230,7 @@ export function renderMissedAlert({ days }) {
     }
     [...byReason].forEach(([reason, jobs], i) => lines.push(...(i ? [""] : []), ...jobs.map(alertLine), reason));
   }
-  lines.push("", "To wish them late: Wish Calendar → People → Send now.");
+  lines.push("", "To wish them late: Ormma → People → Send now.");
   return lines.join("\n");
 }
 

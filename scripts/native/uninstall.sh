@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Stop Wish Calendar on this Mac and remove its launchd agents. The data —
+# Stop Ormma on this Mac and remove its launchd agents. The data —
 # the database and the WhatsApp link, in ~/Library/Application Support/
 # WishCalendar — and the logs stay; install.sh starts it again as it was.
 #

@@ -46,7 +46,7 @@ const CREDS = join(AUTH_DIR, "creds.json");
 const CREDS_BACKUP = join(AUTH_DIR, "creds.json.bak");
 
 /* What the phone's Settings → Linked devices list shows for this link. */
-const DEVICE_NAME = "Wish Calendar";
+const DEVICE_NAME = "Ormma";
 
 const BACKOFF_MIN_MS = 2_000;
 const BACKOFF_MAX_MS = 60_000;

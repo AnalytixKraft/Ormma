@@ -73,9 +73,9 @@ test("days are read from when it was sent, not from when it is read", () => {
 
 test("the answer says what was added, and can never be taken for a 📅 message", () => {
   const trip = readCapture({ text: "Trip to Munnar 10-13 Oct", quoted: null, sent_at: SENT }, IST);
-  assert.equal(renderCaptureReply(trip), "✅ Added to the calendar: *Trip to Munnar*\nSat 10 Oct – Tue 13 Oct, all day\n\nNot right? Change it in Wish Calendar → Calendar.");
+  assert.equal(renderCaptureReply(trip), "✅ Added to the calendar: *Trip to Munnar*\nSat 10 Oct – Tue 13 Oct, all day\n\nNot right? Change it in Ormma → Calendar.");
   const dentist = { ...readCapture({ text: "Dentist Tue 10am", quoted: null, sent_at: SENT, sender: "Anu" }, IST), remind: 5 };
-  assert.equal(renderCaptureReply(dentist), "✅ Added to the calendar: *Dentist* (from Anu)\nTue 13 Oct, 10:00\nReminder 5 minutes before.\n\nNot right? Change it in Wish Calendar → Calendar.");
+  assert.equal(renderCaptureReply(dentist), "✅ Added to the calendar: *Dentist* (from Anu)\nTue 13 Oct, 10:00\nReminder 5 minutes before.\n\nNot right? Change it in Ormma → Calendar.");
   const batteries = readCapture({ text: "Buy batteries", quoted: null, sent_at: SENT }, IST);
   assert.match(renderCaptureReply(batteries), /^✅ Added a task: \*Buy batteries\*\nThere was no day or time in it, so it is a task\./);
   for (const reply of [renderCaptureReply(trip), renderCaptureReply(batteries)]) assert.doesNotMatch(reply, /^\s*[📅📆]/u);
@@ -314,7 +314,7 @@ test("a reply of “delete” to the app's own ✅ takes that off the calendar a
   await capture.poll();
   assert.deepEqual(bridge.sent.slice(4).map((s) => s.text), [
     "*Dentist* was deleted already.",
-    "Only “delete” works as a reply to that. To change *Dentist*, open Wish Calendar → Calendar.",
+    "Only “delete” works as a reply to that. To change *Dentist*, open Ormma → Calendar.",
   ]);
   assert.equal(db.events.count(), 0, "and nothing new added");
 
@@ -358,7 +358,7 @@ test("“delete all …”: counted and asked first; “yes” in reply deletes 
     db.tasks.create({ title: "Sort photos" });
     bridge.held = [inFamily("A", "delete all calendar for this week", { marked: false })];
     await capture.poll();
-    assert.equal(bridge.sent[0].text, "⚠️ Delete 1 event and 1 task — this week (Sun 4 Oct – Sat 10 Oct)?\nReply *yes* to this message within 10 minutes to delete them.\nRepeating events are kept: Choir — delete them in Wish Calendar → Calendar.");
+    assert.equal(bridge.sent[0].text, "⚠️ Delete 1 event and 1 task — this week (Sun 4 Oct – Sat 10 Oct)?\nReply *yes* to this message within 10 minutes to delete them.\nRepeating events are kept: Choir — delete them in Ormma → Calendar.");
     assert.equal(db.events.count(), 3, "nothing deleted yet");
     assert.deepEqual(claude.asked, [], "Claude is not asked");
 

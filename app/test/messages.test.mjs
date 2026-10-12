@@ -89,7 +89,7 @@ test("an alert about several messages names each, with its own reason and tries 
   assert.equal(
     text,
     [
-      "⚠️ *Wish Calendar: 2 messages were not sent*",
+      "⚠️ *Ormma: 2 messages were not sent*",
       "",
       "🗓️ *Your morning reminder* → the linked phone · 07:00",
       "WhatsApp did not take the message.",
@@ -99,11 +99,12 @@ test("an alert about several messages names each, with its own reason and tries 
       "Only admins can send messages in this group.",
       "It is tried again every 10 minutes, 1 more time.",
       "",
-      "To send them now: Wish Calendar → Today → Retry now.",
+      "To send them now: Ormma → Today → Retry now.",
     ].join("\n"),
   );
   assert.equal(alertSummary(text), "2 messages were not sent");
   assert.equal(alertSummary(renderTestAlert()), "test alert");
+  assert.equal(alertSummary("⚠️ *Wish Calendar: a wish was not sent*\n\n…"), "a wish was not sent", "sent under the app's name before");
   assert.equal(alertSummary("something else"), "an alert");
 });
 
@@ -124,7 +125,7 @@ test("the morning alert lists days gone by, each day's wishes grouped by why", (
   assert.equal(
     text,
     [
-      "⚠️ *Wish Calendar: 3 wishes were not sent*",
+      "⚠️ *Ormma: 3 wishes were not sent*",
       "",
       "*Tue 29 Sep*",
       "🎂 *Anu Joseph* → Youth · 08:00",
@@ -137,7 +138,7 @@ test("the morning alert lists days gone by, each day's wishes grouped by why", (
       "💍 *Joseph & Mary* → Choir · 08:00",
       "The app stopped while sending it, so it may not have gone out.",
       "",
-      "To wish them late: Wish Calendar → People → Send now.",
+      "To wish them late: Ormma → People → Send now.",
     ].join("\n"),
   );
 });

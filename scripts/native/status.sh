@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Is Wish Calendar running on this Mac, and is WhatsApp connected?
+# Is Ormma running on this Mac, and is WhatsApp connected?
 #
 #   bash scripts/native/status.sh
 

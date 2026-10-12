@@ -1,4 +1,4 @@
-/* Birthday Reminder — a tear-off wall calendar.
+/* Ormma — a tear-off wall calendar.
  *
  * The page is the calendar board; today is the paper leaf on it, its numeral
  * printed in indigo (red on Sundays, as Indian calendars print them), the
@@ -1052,6 +1052,7 @@ mark { background: var(--marigold-wash); color: inherit; border-radius: 3px; pad
 }
 .signin__form { display: grid; gap: 16px; margin: 0; }
 .signin__form h1 { font-size: 1.9rem; margin: 0; }
+.signin__tagline { margin: -10px 0 0; color: var(--ink-soft); }
 @media (max-width: 640px) {
   .signin { grid-template-columns: 1fr; gap: 28px; }
   .signin .leaf { max-width: 150px; }

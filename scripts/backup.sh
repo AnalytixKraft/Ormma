@@ -26,7 +26,7 @@ if [[ $MODE == docker ]]; then
   docker compose cp app:/data/backup.db "backups/$name" >/dev/null 2>&1
   docker compose exec -T app rm -f /data/backup.db
 else
-  [[ -f $APP_DATA/birthdays.db ]] || fail "no database at $APP_DATA — is Wish Calendar installed? (scripts/native/install.sh)"
+  [[ -f $APP_DATA/birthdays.db ]] || fail "no database at $APP_DATA — is Ormma installed? (scripts/native/install.sh)"
   BACKUP_TO="$ROOT/backups/$name" app_node "$snapshot"
 fi
 say "backups/$name"

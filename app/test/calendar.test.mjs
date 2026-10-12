@@ -167,7 +167,7 @@ test("a calendar reminder WhatsApp refuses is told about like a wish", async () 
   const result = await scheduler.run();
   assert.equal(result.failed, 2, "“Your day” and the reminder");
   const alert = bridge.sent.find((s) => s.chatId === SELF);
-  assert.match(alert.text, /^⚠️ \*Wish Calendar: 2 messages were not sent\*/);
+  assert.match(alert.text, /^⚠️ \*Ormma: 2 messages were not sent\*/);
   assert.match(alert.text, /🗓️ \*Your day\* → \+447700900099 · 07:00/);
   assert.match(alert.text, /⏰ \*Dentist\* → \+447700900099 · 09:00/);
 });
