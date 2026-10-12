@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createCapture, rangeOf, readBulkDelete, readCapture, readReminder, renderCaptureReply } from "../src/capture.mjs";
+import { createCapture, pastRange, rangeOf, readBulkDelete, readCapture, readReminder, readShowNotes, renderCaptureReply } from "../src/capture.mjs";
 import { ClaudeFailed } from "../src/claude.mjs";
 import { openDb } from "../src/db.mjs";
 import { silentLog } from "../src/log.mjs";
@@ -521,4 +521,91 @@ test("in a group where every message counts, “note:” writes on the page with
   assert.deepEqual(claude.asked, ["B", "C", "D"], "a note said in words is not read by Claude");
   assert.equal(db.events.between("2026-10-13", "2026-10-13")[0].title, "Dentist", "a 📅 message Claude calls a note is read by the rules instead");
   assert.deepEqual(bridge.sent.map((s) => [s.key, s.chatId]), [["capture:A", FAMILY], ["capture:B", FAMILY], ["capture:D", FAMILY]], "chat gets no answer");
+});
+
+test("which days “yesterday”, “last week”, “Monday” or “5 Oct” were, seen from a Thursday", () => {
+  const today = "2026-10-08";
+  const r = (text) => {
+    const got = pastRange(text, today);
+    return got && [got.from, got.to, got.label];
+  };
+  assert.deepEqual(r(""), ["2026-10-08", "2026-10-08", "Thu 8 Oct, today"]);
+  assert.deepEqual(r("for yesterday"), ["2026-10-07", "2026-10-07", "Wed 7 Oct, yesterday"]);
+  assert.deepEqual(r("day before yesterday"), ["2026-10-06", "2026-10-06", "Tue 6 Oct, the day before yesterday"]);
+  assert.deepEqual(r("this week"), ["2026-10-04", "2026-10-08", "this week (Sun 4 Oct – Thu 8 Oct)"]);
+  assert.deepEqual(r("last week’s"), ["2026-09-27", "2026-10-03", "last week (Sun 27 Sep – Sat 3 Oct)"]);
+  assert.deepEqual(r("past week"), ["2026-10-02", "2026-10-08", "the last 7 days (Fri 2 Oct – Thu 8 Oct)"]);
+  assert.deepEqual(r("last 3 days"), ["2026-10-06", "2026-10-08", "the last 3 days (Tue 6 Oct – Thu 8 Oct)"]);
+  assert.deepEqual(r("this month"), ["2026-10-01", "2026-10-08", "this month (October 2026)"]);
+  assert.deepEqual(r("last month"), ["2026-09-01", "2026-09-30", "last month (September 2026)"]);
+  assert.deepEqual(r("monday"), ["2026-10-05", "2026-10-05", "Mon 5 Oct"]);
+  assert.deepEqual(r("Thursday"), ["2026-10-08", "2026-10-08", "Thu 8 Oct"], "today, if it is that day");
+  assert.deepEqual(r("last thursday"), ["2026-10-01", "2026-10-01", "Thu 1 Oct"], "“last”: the one before");
+  assert.deepEqual(r("5 oct"), ["2026-10-05", "2026-10-05", "Mon 5 Oct"]);
+  assert.deepEqual(r("Oct 5th"), ["2026-10-05", "2026-10-05", "Mon 5 Oct"]);
+  assert.deepEqual(r("12 Oct"), ["2025-10-12", "2025-10-12", "Sun 12 Oct"], "still to come this year: last year’s");
+  assert.deepEqual(r("5/10"), ["2026-10-05", "2026-10-05", "Mon 5 Oct"]);
+  assert.deepEqual(r("2026-10-05"), ["2026-10-05", "2026-10-05", "Mon 5 Oct"]);
+  for (const no of ["next week", "tomorrow", "blah", "31/02", "to Renjith"]) assert.equal(pastRange(no, today), null, no);
+});
+
+test("a request to read pages back is told from a note", () => {
+  const today = "2026-10-08";
+  const period = (text) => readShowNotes(text, today)?.range?.from ?? readShowNotes(text, today);
+  assert.equal(period("show notes for today"), "2026-10-08");
+  assert.equal(period("Show my journal"), "2026-10-08");
+  assert.equal(period("read last week's notes"), "2026-09-27");
+  assert.equal(period("show me yesterday’s page"), "2026-10-07");
+  assert.equal(period("what did I write yesterday"), "2026-10-07");
+  assert.equal(period("What did I write on Monday?"), "2026-10-05");
+  assert.equal(period("what's on monday's page"), "2026-10-05");
+  assert.equal(period("yesterday's notes"), "2026-10-07");
+  assert.equal(period("show notes from 5 Oct"), "2026-10-05");
+  assert.deepEqual(period("show notes to Renjith"), { range: null, period: "to Renjith" });
+  for (const no of ["show the kids the new park", "Dentist Tue 10am", "Coffee with Tom, he’s doing well", "notes", "send notes to Renjith", "Read pages 10-20 of the report"]) assert.equal(readShowNotes(no, today), null, no);
+});
+
+test("“show notes for …”: the pages come back, oldest first, each under its day", async () => {
+  const { db, bridge, capture } = setup([command("A", "show notes for today", { mark: "note" })], { captureEvery: [FAMILY], calendarTo: FAMILY }, fakeClaude({}));
+  db.journal.save("2026-10-08", "10:00 — Coffee with Tom\n\n16:05 — Plumber comes Thursday");
+  db.journal.save("2026-10-07", "Long walk by the lake #health");
+  assert.equal(await capture.poll(), 0);
+  assert.equal(bridge.sent[0].text, "📓 *Thu 8 Oct, today*\n\n10:00 — Coffee with Tom\n\n16:05 — Plumber comes Thursday");
+  assert.equal(bridge.sent[0].chatId, FAMILY, "where calendar messages go");
+  assert.equal(db.journal.get("2026-10-08").body, "10:00 — Coffee with Tom\n\n16:05 — Plumber comes Thursday", "nothing written");
+
+  bridge.held = [
+    inFamily("B", "what did I write this week", { marked: false }),
+    inFamily("C", "show notes for last week", { marked: false }),
+    inFamily("D", "show notes for 6 Oct", { marked: false }),
+    inFamily("E", "show notes to Renjith", { marked: false }),
+  ];
+  await capture.poll();
+  assert.deepEqual(bridge.sent.slice(1).map((s) => s.text), [
+    "📓 *this week (Sun 4 Oct – Thu 8 Oct)* — 2 pages\n\n*Wed 7 Oct*\nLong walk by the lake #health\n\n*Thu 8 Oct*\n10:00 — Coffee with Tom\n\n16:05 — Plumber comes Thursday",
+    "📓 No pages for last week (Sun 27 Sep – Sat 3 Oct).",
+    "📓 Nothing on the page for Tue 6 Oct.",
+    "I don’t know which days “to Renjith” are. Try today, yesterday, last week, this month, Monday, or a day like 5 Oct.",
+  ]);
+  assert.deepEqual(bridge.acked, ["A", "B", "C", "D", "E"]);
+
+  db.journal.save("2026-09-30", "Month end.");
+  db.journal.save("2026-10-06", Array.from({ length: 300 }, (_, i) => `${String(i).padStart(3, "0")} a line long enough to add up`).join("\n"));
+  bridge.held = [command("F", "show notes for last month", { mark: "note" }), command("G", "show notes for 6 Oct", { mark: "note" })];
+  await capture.poll();
+  assert.equal(bridge.sent.at(-2).text, "📓 *last month (September 2026)* — 1 page\n\n*Wed 30 Sep*\nMonth end.");
+  const long = bridge.sent.at(-1).text;
+  assert.ok(long.length < 3700 && long.endsWith("… shortened — the rest is in Ormma → Notes → Journal."), String(long.length));
+});
+
+test("pages are read back only where the owner writes: not from a group where only 📅 and 📝 messages count", async () => {
+  const { db, bridge, capture } = setup([inFamily("A", "show notes for today", { mark: "note" }), command("B", "show notes", { mark: "note" })]);
+  db.journal.save("2026-10-08", "10:00 — Coffee with Tom");
+  await capture.poll();
+  assert.deepEqual(bridge.sent.map((s) => s.text), [
+    "Pages are read back when asked in Message yourself, or in a group where every message counts — not from here.",
+    "📓 *Thu 8 Oct, today*\n\n10:00 — Coffee with Tom",
+  ]);
+  assert.deepEqual(bridge.acked, ["A", "B"]);
+  assert.equal(db.journal.get("2026-10-08").body, "10:00 — Coffee with Tom", "not written on the page either");
 });

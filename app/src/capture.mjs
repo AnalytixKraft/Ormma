@@ -20,6 +20,8 @@
  *   📝 Coffee with Tom, he's well    a line on the day's journal page, with
  *                                    the time it was sent — the next one
  *                                    goes below it: the day's notes, merged
+ *   show notes for yesterday         that page, read back (last week, this
+ *                                    month, Monday, 5 Oct: those pages)
  *   delete all calendar for this week
  *                                    asked about first; done on a “yes”
  *
@@ -320,6 +322,100 @@ export function readNotePrefix(text) {
   return m && m[1].trim() ? m[1].trim() : null;
 }
 
+const shortDay = (day) => formatShortDate(fromIsoDate(day));
+
+/* Which days "yesterday", "last week", "Monday" or "5 Oct" were, seen from
+ * `today` ('YYYY-MM-DD') — the pages to read back. A day or a month without
+ * a year is the last time it came; a weekday, the last one, today included
+ * ("last Monday": the one before today). → {from, to, label}, or null. */
+export function pastRange(text, today) {
+  const t = text
+    .toLowerCase()
+    .replace(/['’]s\b/g, "")
+    .replace(/^(?:for|from|of|on|about|the)\s+/, "")
+    .replace(/[.!?]+$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const one = (day, name = null) => ({ from: day, to: day, label: name ? `${shortDay(day)}, ${name}` : shortDay(day) });
+  const span = (from, to, name) => ({ from, to, label: `${name} (${shortDay(from)} – ${shortDay(to)})` });
+  const sunday = shiftDay(today, -weekdayOf(fromIsoDate(today)));
+  const { year, month } = fromIsoDate(today);
+  const monthSpan = (y, m, name) => ({ from: isoDate({ year: y, month: m, day: 1 }), to: isoDate({ year: y, month: m, day: daysInMonth(y, m) }), label: `${name} (${MONTHS[m - 1]} ${y})` });
+  if (t === "" || t === "today" || t === "tonight") return one(today, "today");
+  if (t === "yesterday") return one(shiftDay(today, -1), "yesterday");
+  if (t === "day before yesterday") return one(shiftDay(today, -2), "the day before yesterday");
+  if (t === "this week") return span(sunday, today, "this week");
+  if (t === "last week") return span(shiftDay(sunday, -7), shiftDay(sunday, -1), "last week");
+  if (t === "past week" || t === "last 7 days" || t === "past 7 days") return span(shiftDay(today, -6), today, "the last 7 days");
+  let m = /^(?:last|past) (\d{1,2}) days$/.exec(t);
+  if (m && Number(m[1]) >= 2) return span(shiftDay(today, 1 - Number(m[1])), today, `the last ${m[1]} days`);
+  if (t === "this month") return { ...monthSpan(year, month, "this month"), to: today };
+  if (t === "last month") return month === 1 ? monthSpan(year - 1, 12, "last month") : monthSpan(year, month - 1, "last month");
+  m = new RegExp(`^(?:(last|this) )?${WEEKDAY}$`).exec(t);
+  if (m) {
+    let back = (weekdayOf(fromIsoDate(today)) - WEEKDAY_NUMBER[m[2].slice(0, 3)] + 7) % 7;
+    if (m[1] === "last" && back === 0) back = 7;
+    return one(shiftDay(today, -back));
+  }
+  // A day: the last time it came, so without a year one still to come this
+  // year is last year's.
+  const past = (d, mo, y) => {
+    const fits = (yy) => mo >= 1 && mo <= 12 && d >= 1 && d <= daysInMonth(yy, mo);
+    if (y) {
+      const yy = y < 100 ? y + 2000 : y;
+      return fits(yy) ? one(isoDate({ year: yy, month: mo, day: d })) : null;
+    }
+    for (let yy = year; yy >= year - 8; yy--) {
+      if (fits(yy) && isoDate({ year: yy, month: mo, day: d }) <= today) return one(isoDate({ year: yy, month: mo, day: d }));
+    }
+    return null;
+  };
+  m = new RegExp(`^(\\d{1,2})(?:st|nd|rd|th)? (?:of )?${MONTH}(?: (\\d{4}))?$`).exec(t);
+  if (m) return past(Number(m[1]), monthOf(m[2]), m[3] && Number(m[3]));
+  m = new RegExp(`^${MONTH} (\\d{1,2})(?:st|nd|rd|th)?(?:,? (\\d{4}))?$`).exec(t);
+  if (m) return past(Number(m[2]), monthOf(m[1]), m[3] && Number(m[3]));
+  m = /^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2}|\d{4}))?$/.exec(t);
+  if (m) return past(Number(m[1]), Number(m[2]), m[3] && Number(m[3]));
+  m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
+  if (m) return past(Number(m[3]), Number(m[2]), Number(m[1]));
+  return null;
+}
+
+/* "show notes for yesterday", "read last week's journal", "what did I write
+ * on Monday", "today's page": a request to read pages back. → {range} —
+ * the days, from pastRange() — or {range: null, period} when the words say
+ * when but that could not be read; null when it is no such request. */
+export function readShowNotes(text, today) {
+  const t = text.replace(/\s+/g, " ").trim();
+  const PAGE = "(?:notes?|journal|diary|pages?|entries|entry)";
+  const forms = [
+    new RegExp(`^(?:please )?(?:show|read|list|open|see|display|get|pull up)(?: me)?(?: (?:my|the))?(?: (.+?))? ${PAGE}\\b(?: (?:for|from|of|on|about))?(?: (.*))?$`, "i"),
+    new RegExp(`^(?:please )?what(?:'s|’s| is| are) (?:in|on) (?:my |the )?(?:(.+?) )?${PAGE}\\b(?: (?:for|from|of|on|about))?(?: (.*))?$`, "i"),
+    new RegExp(`^(?:please )?what did i (?:write|note|say|put)(?: (?:in|on) (?:my |the )?${PAGE})?(?: (?:for|from|on|about))?(?: (.*))?()$`, "i"),
+    new RegExp(`^(?:my |the )?(.+?)(?:'s|’s) ${PAGE}()$`, "i"),
+  ];
+  for (const form of forms) {
+    const m = form.exec(t);
+    if (!m) continue;
+    const period = [m[1], m[2]].filter(Boolean).join(" ").trim();
+    const range = pastRange(period, today);
+    if (range) return { range };
+    // "Read pages 10-20 of the report" is a task: only a diary word with no
+    // readable days in the rest is asked about.
+    return /\b(?:notes?|journal|diary)\b/i.test(t) ? { range: null, period } : null;
+  }
+  return null;
+}
+
+/* How long an answer with pages in it may be: WhatsApp takes far more,
+ * but a page on a phone is read in the app. */
+const MAX_SHOW = 3_500;
+function clipMessage(text) {
+  if (text.length <= MAX_SHOW) return text;
+  const cut = text.lastIndexOf("\n", MAX_SHOW);
+  return `${text.slice(0, cut > MAX_SHOW / 2 ? cut : MAX_SHOW).trimEnd()}\n\n… shortened — the rest is in Ormma → Notes → Journal.`;
+}
+
 /* The reminder a new event gets, as Settings says — when it can have it: an
  * all-day event only one a day or more ahead. */
 export function reminderFor(event, minutes) {
@@ -478,6 +574,30 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     return { answer: { title: "Note", text: `📓 Noted on ${pageOf(day)} page (${at}).\nReply “delete” to take it off.` } };
   }
 
+  /* "show notes for yesterday": the pages read back, oldest first. The
+   * answer goes where calendar messages go, whoever asked — so, as with
+   * "delete all", only the owner's chats may ask: Message yourself, or a
+   * group where every message counts. Not a shared group's 📝. */
+  function showNotes(command, request, settings) {
+    db.captures.record(command);
+    const title = "Notes";
+    if (!(command.chat === "self" || everyOf(settings).includes(command.chat_id))) {
+      return { answer: { title, text: "Pages are read back when asked in Message yourself, or in a group where every message counts — not from here." } };
+    }
+    if (!request.range) {
+      return { answer: { title, text: `I don’t know which days “${request.period}” are. Try today, yesterday, last week, this month, Monday, or a day like 5 Oct.` } };
+    }
+    const { from, to, label } = request.range;
+    const pages = db.journal.pagesBetween(from, to);
+    log.info({ message_id: command.id, pages: pages.length }, "📝 messages: pages read back"); // never their words
+    if (!pages.length) return { answer: { title, text: from === to ? `📓 Nothing on the page for ${label}.` : `📓 No pages for ${label}.` } };
+    const lines =
+      from === to
+        ? [`📓 *${label}*`, "", pages[0].body]
+        : [`📓 *${label}* — ${pages.length === 1 ? "1 page" : `${pages.length} pages`}`, ...pages.flatMap((page) => ["", `*${shortDay(page.day)}*`, page.body])];
+    return { answer: { title, text: clipMessage(lines.join("\n")) } };
+  }
+
   /* "remind me to call Renjith": an event at the morning time (07:00 unless
    * changed) — the next morning, without a day — with its reminder at the
    * time. A day or a time in it, read by Claude or the rules, wins. */
@@ -556,6 +676,9 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
       db.captures.record(command);
       return null;
     }
+    // "show notes for yesterday": pages read back, not written on.
+    const show = readShowNotes(command.text, sentOn(command, settings).day);
+    if (show) return showNotes(command, show, settings);
     // 📝: for the diary, whatever else it says — a reply of 📝 to a message
     // keeps that message on the page.
     if (command.mark === "note") return addNote(command, command.text, settings);

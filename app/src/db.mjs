@@ -740,6 +740,8 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
     count: () => q("SELECT COUNT(*) AS n FROM notes WHERE kind = 'journal'").get().n,
     /* The days from `from` through `to` that have a page. */
     daysBetween: (from, to) => q("SELECT day FROM notes WHERE kind = 'journal' AND day BETWEEN ? AND ? ORDER BY day").all(from, to).map((r) => r.day),
+    /* The pages of those days, whole, oldest first. */
+    pagesBetween: (from, to) => q("SELECT day, body FROM notes WHERE kind = 'journal' AND day BETWEEN ? AND ? ORDER BY day").all(from, to).map((r) => ({ day: r.day, body: r.body })),
     /* A line — a paragraph — written at the end of the day's page, under
      * what is there. → the page's id */
     append(day, chunk) {
