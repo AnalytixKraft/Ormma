@@ -28,11 +28,11 @@ Two ways to run the pair: **on a Mac, directly** — two small Node programs tha
 ## Set it up
 
 ```bash
-git clone https://github.com/AnalytixKraft/WishCalendarApp.git
+git clone https://github.com/AnalytixKraft/Ormma.git
 ```
 
 ```bash
-cd WishCalendarApp
+cd Ormma
 ```
 
 ```bash
