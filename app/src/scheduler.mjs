@@ -33,7 +33,7 @@
  * message, and go out once each. */
 
 import { BridgeError, CONNECTION_CODES, explain } from "./bridge.mjs";
-import { DAY_MINUTES, daysBetween, eventsOn, shiftDay, startsBetween } from "./calendar.mjs";
+import { DAY_MINUTES, REMINDER_DAYS, daysBetween, eventsOn, shiftDay, startsBetween } from "./calendar.mjs";
 import {
   addDays,
   formatShortDate,
@@ -371,6 +371,9 @@ export function createScheduler({ db, bridge, log, clock = () => new Date(), pau
         prunedFor = isoDate(date);
         db.deliveries.prune(isoDate(addDays(date, -HISTORY_DAYS)));
         db.alerts.expire(alertCutoff(), clock().toISOString());
+        // Reminders done reminding go off the calendar.
+        const gone = db.events.dropFinishedReminders(shiftDay(isoDate(date), -REMINDER_DAYS.at(-1)));
+        if (gone) log.info({ reminders: gone }, "reminders done reminding, deleted");
       }
       reviewPastDays(settings, date, minute);
       if (!settings.enabled && !force) {

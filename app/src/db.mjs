@@ -292,6 +292,30 @@ const MIGRATIONS = [
     outcome    TEXT    CHECK (outcome IS NULL OR outcome IN ('deleted', 'cancelled', 'expired'))
   );
   `,
+  // 10 — a reminder ("remind me to …") keeps reminding — its day, the two
+  // after, then every other day for ten days (calendar.mjs, REMINDER_DAYS)
+  // — and then goes. The ones set before now are found by the message that
+  // set them. And a message added from WhatsApp forgets its event or task
+  // once that is deleted: ids are used again, and a reply to an old "✅
+  // Added …" must never reach whatever has the id now. Those already
+  // pointing past theirs are found by their time: made before what has the
+  // id now.
+  `
+  ALTER TABLE events ADD COLUMN reminder INTEGER NOT NULL DEFAULT 0;
+  UPDATE captures SET item_id = NULL WHERE kind = 'event' AND item_id IS NOT NULL AND
+    (item_id NOT IN (SELECT id FROM events) OR created_at < (SELECT created_at FROM events WHERE id = captures.item_id));
+  UPDATE captures SET item_id = NULL WHERE kind = 'task' AND item_id IS NOT NULL AND
+    (item_id NOT IN (SELECT id FROM tasks) OR created_at < (SELECT created_at FROM tasks WHERE id = captures.item_id));
+  UPDATE events SET reminder = 1 WHERE id IN (
+    SELECT item_id FROM captures WHERE kind = 'event' AND item_id IS NOT NULL AND
+      (lower(text) LIKE 'remind%' OR lower(text) LIKE 'please remind%' OR lower(text) LIKE 'set a reminder%'));
+  CREATE TRIGGER events_forgotten AFTER DELETE ON events BEGIN
+    UPDATE captures SET item_id = NULL WHERE kind = 'event' AND item_id = old.id;
+  END;
+  CREATE TRIGGER tasks_forgotten AFTER DELETE ON tasks BEGIN
+    UPDATE captures SET item_id = NULL WHERE kind = 'task' AND item_id = old.id;
+  END;
+  `,
 ];
 
 function migrate(db) {
@@ -340,6 +364,7 @@ const event = (r) =>
         repeat: r.repeat,
         repeatUntil: r.repeat_until,
         remind: r.remind,
+        reminder: r.reminder === 1,
         notes: r.notes,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
@@ -560,6 +585,8 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
       q("SELECT * FROM deliveries ORDER BY updated_at DESC, key LIMIT ?").all(limit).map(delivery),
     /* The answer to a 📅 message that WhatsApp gave this id, or null. */
     captureAnswer: (messageId) => delivery(q("SELECT * FROM deliveries WHERE message_id = ? AND kind = 'capture'").get(messageId)),
+    /* An event's reminder that WhatsApp gave this id, or null. */
+    eventReminder: (messageId) => delivery(q("SELECT * FROM deliveries WHERE message_id = ? AND kind = 'event'").get(messageId)),
     /* History is kept for a year; older rows go. */
     prune: (beforeDay) => q("DELETE FROM deliveries WHERE day < ?").run(beforeDay).changes,
   };
@@ -702,15 +729,18 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
     /* Every event that may fall on a day from `from` through `to`: one that
      * starts by `to`, and repeats or lasts until `from` at least. */
     between: (from, to) =>
-      q("SELECT * FROM events WHERE day <= ? AND (repeat <> '' OR COALESCE(end_day, day) >= ?) ORDER BY day, time, id").all(to, from).map(event),
+      q("SELECT * FROM events WHERE day <= ? AND (repeat <> '' OR reminder = 1 OR COALESCE(end_day, day) >= ?) ORDER BY day, time, id").all(to, from).map(event),
     count: () => q("SELECT COUNT(*) AS n FROM events").get().n,
     all: () => q("SELECT * FROM events ORDER BY day, time, id").all().map(event),
     create: (fields) =>
       Number(
-        q("INSERT INTO events (title, day, end_day, time, end_time, repeat, repeat_until, remind, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+        q("INSERT INTO events (title, day, end_day, time, end_time, repeat, repeat_until, remind, notes, reminder) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
           ...eventValues(fields),
+          fields.reminder ? 1 : 0,
         ).lastInsertRowid,
       ),
+    /* Reminders whose last day was before `today`: done reminding. */
+    dropFinishedReminders: (lastDayBefore) => q("DELETE FROM events WHERE reminder = 1 AND day < ?").run(lastDayBefore).changes,
     update: (id, fields) => q(`UPDATE events SET ${EVENT_FIELDS}, updated_at = ${NOW} WHERE id = ?`).run(...eventValues(fields), id).changes > 0,
     remove: (id) => q("DELETE FROM events WHERE id = ?").run(id).changes > 0,
   };

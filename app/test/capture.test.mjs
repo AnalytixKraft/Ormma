@@ -125,7 +125,7 @@ function setup(held, settings = {}, claude = null, { dataDir = null } = {}) {
   const scheduler = createScheduler({ db, bridge, log: silentLog, clock, pause: async () => {}, gap: () => 0 });
   db.settings.save({ enabled: true, timezone: "Asia/Kolkata", captureChats: ["self", FAMILY], ...settings });
   db.chats.remember([{ id: FAMILY, subject: "Family" }]);
-  return { db, bridge, capture: createCapture({ db, bridge, scheduler, log: silentLog, clock, claude, dataDir }), at: (iso) => (now = new Date(iso)) };
+  return { db, bridge, scheduler, capture: createCapture({ db, bridge, scheduler, log: silentLog, clock, claude, dataDir }), at: (iso) => (now = new Date(iso)) };
 }
 
 /* Stands in for claude.mjs's reader: answers by the message's words. */
@@ -410,11 +410,12 @@ test("“remind me to …”: a reminder the next morning at the morning time �
 
   const { db, bridge, capture } = setup([command("A", "remind me to call Renjith"), command("B", "remind me at 5pm to pay the electricity bill")]);
   assert.equal(await capture.poll(), 2);
-  const [renjith] = db.events.between("2026-10-09", "2026-10-09");
+  const renjith = db.events.between("2026-10-09", "2026-10-09").find((e) => e.title === "Call Renjith");
   assert.deepEqual([renjith.title, renjith.day, renjith.time, renjith.remind], ["Call Renjith", "2026-10-09", "07:00", 0], "10:00 on the 8th: the next morning");
-  const [bill] = db.events.between("2026-10-08", "2026-10-08");
+  const bill = db.events.between("2026-10-08", "2026-10-08").find((e) => e.title === "Pay the electricity bill");
   assert.deepEqual([bill.title, bill.time, bill.remind], ["Pay the electricity bill", "17:00", 0]);
-  assert.equal(bridge.sent[0].text, "⏰ Reminder set: *Call Renjith*\nFri 9 Oct, 07:00\n\nNot right? Reply “delete” to this, or change it in Wish Calendar → Calendar.");
+  assert.equal(bridge.sent[0].text, "⏰ Reminder set: *Call Renjith*\nFri 9 Oct, 07:00 — then every day to Sun 11 Oct, and every other day to Wed 21 Oct.\n\nReply “done” to any of them to stop it, or “delete” to this.");
+  assert.equal(renjith.reminder, true);
 
   const early = setup([command("C", "remind me to water the plants", { sent_at: "2026-10-08T00:30:00.000Z" })], { morningTime: "06:30" }); // 06:00 in India
   await early.capture.poll();
@@ -428,4 +429,37 @@ test("a reminder read by Claude keeps the day and time Claude found", async () =
   await capture.poll();
   const [call] = db.events.between("2026-10-09", "2026-10-09");
   assert.deepEqual([call.title, call.time, call.remind], ["Call Renjith", "14:00", 0]);
+});
+
+test("“done” in reply to a reminder stops it — all its days to come; other replies to a reminder are let go", async () => {
+  const { db, bridge, scheduler, capture, at } = setup([command("A", "remind me to call Renjith")]);
+  await capture.poll(); // set on Thu 8 Oct, 10:00: from Fri 9 Oct, 07:00
+  const id = db.events.between("2026-10-09", "2026-10-09").find((e) => e.title === "Call Renjith").id;
+  at("2026-10-09T01:31:00Z"); // Fri, 07:01
+  await scheduler.run();
+  const reminderMessage = db.deliveries.get(`event:${id}:2026-10-09:0`).message_id;
+  assert.match(bridge.sent.at(-1).text, /^⏰ \*Call Renjith\*\nToday, 07:00 · reminder 1 of 8/);
+
+  bridge.held = [command("B", "thanks", { quoted_id: reminderMessage }), command("C", "Done", { quoted_id: reminderMessage })];
+  const before = bridge.sent.length;
+  await capture.poll();
+  assert.deepEqual(bridge.sent.slice(before).map((s) => s.text), ["✅ Done: *Call Renjith* — no more reminders."]);
+  assert.equal(db.events.get(id), null);
+  assert.deepEqual(bridge.acked.slice(-2), ["B", "C"]);
+});
+
+test("a reply to an old ✅ never reaches what has the same id now", async () => {
+  const { db, bridge, capture } = setup([command("A", "Dentist Tue 10am")]);
+  await capture.poll();
+  const dentistAnswer = db.deliveries.get("capture:A").message_id;
+  const dentist = db.events.between("2026-10-13", "2026-10-13")[0].id;
+  db.events.remove(dentist); // deleted on the Calendar page
+  bridge.held = [command("B", "Lunch Tue 1pm")];
+  await capture.poll();
+  const lunch = db.events.between("2026-10-13", "2026-10-13")[0];
+  assert.equal(lunch.id, dentist, "SQLite gave the id again");
+  bridge.held = [command("C", "📅 delete", { text: "delete", quoted_id: dentistAnswer })];
+  await capture.poll();
+  assert.equal(bridge.sent.at(-1).text, "*Dentist* was deleted already.");
+  assert.ok(db.events.get(lunch.id), "Lunch is untouched");
 });

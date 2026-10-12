@@ -32,7 +32,7 @@
 
 import { readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { DAY_MINUTES, MAX_TITLE, occurrencesBetween, reminderLabel, shiftDay, timeRange } from "./calendar.mjs";
+import { DAY_MINUTES, MAX_TITLE, REMINDER_DAYS, occurrencesBetween, reminderLabel, repeatLabel, shiftDay, timeRange } from "./calendar.mjs";
 import { MONTHS, daysInMonth, formatShortDate, fromIsoDate, isoDate, parseTime, weekdayOf, zonedNow } from "./dates.mjs";
 
 const MONTH = "(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\.?";
@@ -216,7 +216,14 @@ export function renderCaptureReply(item) {
   const short = (day) => formatShortDate(fromIsoDate(day));
   const by = item.sender ? ` (from ${item.sender})` : "";
   if (item.reminder) {
-    return [`⏰ Reminder set: *${item.title}*${by}`, `${short(item.day)}, ${item.time}`, "", "Not right? Reply “delete” to this, or change it in Wish Calendar → Calendar."].join("\n");
+    const daily = shiftDay(item.day, REMINDER_DAYS[2]);
+    const last = shiftDay(item.day, REMINDER_DAYS.at(-1));
+    return [
+      `⏰ Reminder set: *${item.title}*${by}`,
+      `${short(item.day)}, ${item.time} — then every day to ${short(daily)}, and every other day to ${short(last)}.`,
+      "",
+      "Reply “done” to any of them to stop it, or “delete” to this.",
+    ].join("\n");
   }
   if (item.kind === "event") {
     const days = item.endDay ? `${short(item.day)} – ${short(item.endDay)}` : short(item.day);
@@ -235,6 +242,9 @@ export function renderCaptureReply(item) {
 /* A reply that asks to take something off the calendar again. */
 const DELETE = /^\s*(?:please\s+)?(?:delete|remove|cancel|del)\b|^\s*(?:\u274C|\u2716|\u{1F5D1})/iu;
 export const isDelete = (text) => DELETE.test(text);
+/* A reply that says a reminder's work is done. */
+const DONE = /^\s*(?:done|did it|completed?|finished|called|paid|stop)\b|^\s*(?:\u2705|\u2714|\u{1F44D})/iu;
+export const isDone = (text) => DONE.test(text);
 
 /* What was deleted, in the answer: an event by its day and time. */
 function deletedLine(kind, item) {
@@ -382,7 +392,8 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     }
     const span = rangeOf(bulk.range, sentOn(command, settings).day);
     const inRange = span ? db.events.between(span.from, span.to) : db.events.all();
-    const events = bulk.kinds === "tasks" ? [] : span ? inRange.filter((e) => !e.repeat && e.day >= span.from && e.day <= span.to) : inRange;
+    const inSpan = (e) => (e.reminder ? occurrencesBetween(e, span.from, span.to).length > 0 : e.day >= span.from && e.day <= span.to);
+    const events = bulk.kinds === "tasks" ? [] : span ? inRange.filter((e) => !e.repeat && inSpan(e)) : inRange;
     const kept = bulk.kinds === "tasks" || !span ? [] : inRange.filter((e) => e.repeat && occurrencesBetween(e, span.from, span.to).length);
     const tasks = bulk.kinds === "events" ? [] : span ? db.tasks.dueBetween(span.from, span.to) : db.tasks.all();
     const label = span ? span.label : "everything on the calendar";
@@ -451,6 +462,25 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     return { kind: "event", reminder: true, title, day, endDay: null, time, endTime: "", remind: 0, notes: notesFor(command, where), sender: command.sender ?? null, why: null };
   }
 
+  /* A reply to an event's "⏰ …" reminder: "done" or "delete" takes a
+   * reminder ("remind me to …") off the calendar, with all its days to
+   * come; "delete", a one-off event. A repeating event is deleted in
+   * Calendar, not from one of its weeks. Anything else: let go. */
+  function answerReminder(command, reminded) {
+    db.captures.record(command);
+    const id = Number(reminded.key.split(":")[1]);
+    const found = db.events.get(id);
+    const event = found && (!reminded.title || found.title === reminded.title) ? found : null;
+    const title = reminded.title ?? "it";
+    const stop = isDelete(command.text) || (isDone(command.text) && event?.reminder);
+    if (!stop) return null;
+    if (!event) return { title, text: `*${title}* was deleted already.` };
+    if (event.repeat) return { title, text: `*${title}* repeats ${repeatLabel(event.repeat).toLowerCase()} — delete it in Wish Calendar → Calendar.` };
+    db.events.remove(event.id);
+    log.info({ message_id: command.id, reminder: event.reminder }, "📅 message: a reminder answered"); // never its text
+    return { title, text: event.reminder ? `✅ Done: *${title}* — no more reminders.` : `🗑️ Deleted: *${title}*` };
+  }
+
   /* A reply to one of the app's own "✅ Added …": "delete" takes that off
    * the calendar again; anything else is not read as something new. A
    * reply to its "⚠️ Delete …?" is the answer to that. The answer, or null
@@ -460,12 +490,15 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     const bulk = db.bulkDeletes.get(answered.key.replace(/^capture:/, ""));
     if (bulk) return confirmBulk(command, bulk);
     const added = db.captures.get(answered.key.replace(/^capture:/, ""));
-    if (!added?.kind || !added.item_id) return null; // an answer to a delete, say
+    if (!added?.kind) return null; // an answer to a delete, say
     const title = answered.title ?? "it";
-    if (!isDelete(command.text)) {
+    if (!isDelete(command.text) && !isDone(command.text)) {
       return { title, text: `Only “delete” works as a reply to that. To change *${title}*, open Wish Calendar → Calendar.` };
     }
-    const item = added.kind === "event" ? db.events.get(added.item_id) : db.tasks.get(added.item_id);
+    // Deleted, its item is forgotten (db.mjs, migration 10); and an id is
+    // used again, so the title must still be the one that was added.
+    const found = added.item_id && (added.kind === "event" ? db.events.get(added.item_id) : db.tasks.get(added.item_id));
+    const item = found && (!answered.title || found.title === answered.title) ? found : null;
     if (!item) return { title, text: `*${title}* was deleted already.` };
     if (added.kind === "event") db.events.remove(item.id);
     else db.tasks.remove(item.id);
@@ -484,6 +517,8 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     }
     const answered = command.quoted_id ? db.deliveries.captureAnswer(command.quoted_id) : null;
     if (answered) return { answer: answerReply(command, answered) };
+    const reminded = command.quoted_id ? db.deliveries.eventReminder(command.quoted_id) : null;
+    if (reminded) return { answer: answerReminder(command, reminded) };
     const bulk = readBulkDelete(command.text);
     if (bulk) {
       db.captures.record(command);
@@ -521,7 +556,7 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     return db.transaction(() => {
       const id =
         item.kind === "event"
-          ? db.events.create({ title: item.title, day: item.day, endDay: item.endDay, time: item.time, endTime: item.endTime, remind: item.remind, notes: item.notes })
+          ? db.events.create({ title: item.title, day: item.day, endDay: item.endDay, time: item.time, endTime: item.endTime, remind: item.remind, notes: item.notes, reminder: Boolean(item.reminder) })
           : db.tasks.create({ title: item.title, due: item.due, notes: item.notes });
       db.captures.record(command, item.kind, id);
       return item;

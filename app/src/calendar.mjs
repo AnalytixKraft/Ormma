@@ -29,6 +29,11 @@ export const REMINDERS = [
   [10080, "1 week before"],
 ];
 export const DAY_MINUTES = 1440;
+
+/* A reminder ("remind me to …") comes on its day and the two after, then
+ * every other day for ten days — eight times in thirteen days — and then
+ * goes off the calendar (scheduler.mjs). Days after its first. */
+export const REMINDER_DAYS = [0, 1, 2, 4, 6, 8, 10, 12];
 export const reminderLabel = (minutes) => REMINDERS.find(([m]) => m === minutes)?.[1] ?? `${minutes} minutes before`;
 export const repeatLabel = (repeat) => REPEATS.find(([r]) => r === repeat)?.[1] ?? "";
 
@@ -45,7 +50,8 @@ export const spanOf = (event) => (event.endDay ? daysBetween(event.day, event.en
 
 /* The days an event starts on, from `from` through `to`, in order. A monthly
  * event on the 31st falls on the last day of a shorter month, and a yearly
- * one on 29 February on the 28th in a common year — as birthdays do. */
+ * one on 29 February on the 28th in a common year — as birthdays do. A
+ * reminder, on REMINDER_DAYS. */
 export function startsBetween(event, from, to) {
   const last = event.repeat && event.repeatUntil && event.repeatUntil < to ? event.repeatUntil : to;
   const first = event.day > from ? event.day : from;
@@ -55,6 +61,10 @@ export function startsBetween(event, from, to) {
     if (day >= first && day <= last) out.push(day);
   };
   const start = fromIsoDate(event.day);
+  if (event.reminder) {
+    for (const n of REMINDER_DAYS) keep(shiftDay(event.day, n));
+    return out;
+  }
   switch (event.repeat) {
     case "daily":
       for (let day = first; day <= last; day = shiftDay(day, 1)) out.push(day);

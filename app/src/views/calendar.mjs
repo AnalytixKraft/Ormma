@@ -1,7 +1,7 @@
 /* The calendar: the month, a day's events and birthdays, the tasks, the
  * event and task forms — and "Your day" on the Today page. */
 
-import { MAX_NOTES, MAX_TITLE, REMINDERS, REPEATS, reminderLabel, repeatLabel, timeRange } from "../calendar.mjs";
+import { MAX_NOTES, MAX_TITLE, REMINDERS, REMINDER_DAYS, REPEATS, reminderLabel, repeatLabel, shiftDay, timeRange } from "../calendar.mjs";
 import { MONTHS, WEEKDAYS, formatShortDate, fromIsoDate, isoDate, weekdayOf } from "../dates.mjs";
 import { occasionNote } from "../messages.mjs";
 import { html, plural, raw, selectOptions } from "./html.mjs";
@@ -25,8 +25,9 @@ function dueWord(due, today) {
 function eventDetails(o) {
   const parts = [];
   if (o.days > 1) parts.push(`day ${o.dayOf} of ${o.days}`);
+  if (o.event.reminder) parts.push(`reminder, to ${shortDay(shiftDay(o.event.day, REMINDER_DAYS.at(-1)))}`);
   if (o.event.repeat) parts.push(repeatLabel(o.event.repeat).toLowerCase());
-  if (o.event.remind !== null) parts.push(`reminder ${reminderLabel(o.event.remind).toLowerCase()}`);
+  if (o.event.remind !== null && !o.event.reminder) parts.push(`reminder ${reminderLabel(o.event.remind).toLowerCase()}`);
   return parts.join(" · ");
 }
 
