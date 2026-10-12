@@ -278,6 +278,20 @@ const MIGRATIONS = [
   CREATE INDEX deliveries_by_day ON deliveries (day);
   CREATE INDEX deliveries_by_update ON deliveries (updated_at);
   `,
+  // 9 — "delete all …" from WhatsApp is asked about first, and done on a
+  // "yes" in reply. Here waits what was counted — the events and tasks, by
+  // id — keyed by the message that asked, until the answer, or ten minutes.
+  `
+  CREATE TABLE bulk_deletes (
+    message_id TEXT    PRIMARY KEY,
+    label      TEXT    NOT NULL,
+    events     TEXT    NOT NULL,
+    tasks      TEXT    NOT NULL,
+    created_at TEXT    NOT NULL,
+    done_at    TEXT,
+    outcome    TEXT    CHECK (outcome IS NULL OR outcome IN ('deleted', 'cancelled', 'expired'))
+  );
+  `,
 ];
 
 function migrate(db) {
@@ -452,6 +466,7 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
     capture_chats: "self",
     capture_every: "",
     default_remind: "5",
+    morning_time: "07:00",
     my_phone: "",
     country_code: "91",
   };
@@ -475,11 +490,12 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
         captureChats: values.capture_chats.split(" ").filter(Boolean), // where they count: "self" and group ids
         captureEvery: values.capture_every.split(" ").filter(Boolean), // groups where every message counts (Claude reads it)
         defaultRemind: values.default_remind === "" ? null : Number(values.default_remind), // minutes before; a new event's reminder
+        morningTime: values.morning_time, // 'HH:MM': a reminder without a time goes then
         myPhone: values.my_phone,
         countryCode: values.country_code,
       };
     },
-    save({ enabled, wishTime, reminderTime, timezone, daysAhead, template, anniversaryTemplate, reminderTo, alertTo, calendarTo, capture, captureChats, captureEvery, defaultRemind, myPhone, countryCode }) {
+    save({ enabled, wishTime, reminderTime, timezone, daysAhead, template, anniversaryTemplate, reminderTo, alertTo, calendarTo, capture, captureChats, captureEvery, defaultRemind, morningTime, myPhone, countryCode }) {
       const upsert = q("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value");
       const values = {
         enabled: enabled === undefined ? undefined : enabled ? "1" : "0",
@@ -496,6 +512,7 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
         capture_chats: captureChats === undefined ? undefined : captureChats.join(" "),
         capture_every: captureEvery === undefined ? undefined : captureEvery.join(" "),
         default_remind: defaultRemind === undefined ? undefined : defaultRemind === null ? "" : String(defaultRemind),
+        morning_time: morningTime,
         my_phone: myPhone,
         country_code: countryCode,
       };
@@ -687,6 +704,7 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
     between: (from, to) =>
       q("SELECT * FROM events WHERE day <= ? AND (repeat <> '' OR COALESCE(end_day, day) >= ?) ORDER BY day, time, id").all(to, from).map(event),
     count: () => q("SELECT COUNT(*) AS n FROM events").get().n,
+    all: () => q("SELECT * FROM events ORDER BY day, time, id").all().map(event),
     create: (fields) =>
       Number(
         q("INSERT INTO events (title, day, end_day, time, end_time, repeat, repeat_until, remind, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
@@ -706,6 +724,7 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
     dueBy: (day) => q("SELECT * FROM tasks WHERE done_at IS NULL AND due <= ? ORDER BY due, id").all(day).map(task),
     /* Due from `from` through `to`, done or not — for the month. */
     dueBetween: (from, to) => q("SELECT * FROM tasks WHERE due BETWEEN ? AND ? ORDER BY due, done_at IS NOT NULL, id").all(from, to).map(task),
+    all: () => q("SELECT * FROM tasks ORDER BY id").all().map(task),
     /* The latest done. */
     done: (limit = 10) => q("SELECT * FROM tasks WHERE done_at IS NOT NULL ORDER BY done_at DESC, id DESC LIMIT ?").all(limit).map(task),
     create: ({ title, due = null, notes = "" }) => Number(q("INSERT INTO tasks (title, due, notes) VALUES (?, ?, ?)").run(title, due, notes).lastInsertRowid),
@@ -734,5 +753,43 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
     prune: (before) => q("DELETE FROM captures WHERE created_at < ?").run(before).changes,
   };
 
-  return { people, chats, settings, password, deliveries, alerts, notes, journal, events, tasks, captures, transaction, close: () => db.close() };
+  /* "delete all …", asked about and waiting for its "yes". `at` is the
+   * caller's clock, an ISO string. */
+  const bulkDeletes = {
+    create: ({ messageId, label, events: ids, tasks: taskIds }, at) =>
+      q("INSERT OR IGNORE INTO bulk_deletes (message_id, label, events, tasks, created_at) VALUES (?, ?, ?, ?, ?)").run(
+        messageId,
+        label,
+        JSON.stringify(ids),
+        JSON.stringify(taskIds),
+        at,
+      ),
+    get(messageId) {
+      const r = q("SELECT * FROM bulk_deletes WHERE message_id = ?").get(messageId);
+      return r ? { ...r, events: JSON.parse(r.events), tasks: JSON.parse(r.tasks) } : null;
+    },
+    finish: (messageId, outcome, at) => q("UPDATE bulk_deletes SET done_at = ?, outcome = ? WHERE message_id = ? AND done_at IS NULL").run(at, outcome, messageId).changes > 0,
+  };
+
+  /* A copy of the whole database, as it is now, at `file` — before a
+   * deletion that cannot be undone otherwise. */
+  const snapshot = (file) => q("VACUUM INTO ?").run(file);
+
+  return {
+    people,
+    chats,
+    settings,
+    password,
+    deliveries,
+    alerts,
+    notes,
+    journal,
+    events,
+    tasks,
+    captures,
+    bulkDeletes,
+    snapshot,
+    transaction,
+    close: () => db.close(),
+  };
 }

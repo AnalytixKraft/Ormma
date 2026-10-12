@@ -173,6 +173,12 @@ ${whatsappSection(wa)}
       ${error(errors.defaultRemind)}
       <span class="hint">Events added from WhatsApp get it, and an event you add here starts with it. Change it on any event.</span>
     </label>
+    <label class="field field--short">
+      <span class="field__label">A reminder without a time goes at</span>
+      <input type="time" name="morningTime" value="${values.morningTime}"${invalid(errors.morningTime)}>
+      ${error(errors.morningTime)}
+      <span class="hint">“remind me to call Renjith” on WhatsApp: the next morning at this time — unless it says when.</span>
+    </label>
     <input type="hidden" name="captureShown" value="1">
     <label class="check check--big"><input type="checkbox" name="capture" value="1"${values.capture ? raw(" checked") : ""}> <span><strong>Add to the calendar from WhatsApp</strong><br><span class="hint">A message that starts with 📅, in a chat ticked below, goes on the calendar: <code>📅 Dentist Tue 10am</code>, <code>📅 Trip 10-13 Oct</code>, <code>📅 task Pay rent by Fri</code> — or a reply of 📅 to a message, to add what it says. The answer goes where calendar messages go.</span></span></label>
     ${capturePicks(values, groups, claudeModel, claudeStatus)}

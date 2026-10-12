@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createCapture, readCapture, renderCaptureReply } from "../src/capture.mjs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createCapture, rangeOf, readBulkDelete, readCapture, readReminder, renderCaptureReply } from "../src/capture.mjs";
 import { ClaudeFailed } from "../src/claude.mjs";
 import { openDb } from "../src/db.mjs";
 import { silentLog } from "../src/log.mjs";
@@ -114,7 +117,7 @@ function fakeBridge(held) {
 const FAMILY = "120363000000000001@g.us";
 const SELF_JID = "447700900077@s.whatsapp.net";
 
-function setup(held, settings = {}, claude = null) {
+function setup(held, settings = {}, claude = null, { dataDir = null } = {}) {
   const db = openDb(":memory:");
   const bridge = fakeBridge(held);
   let now = new Date("2026-10-08T05:00:00Z");
@@ -122,7 +125,7 @@ function setup(held, settings = {}, claude = null) {
   const scheduler = createScheduler({ db, bridge, log: silentLog, clock, pause: async () => {}, gap: () => 0 });
   db.settings.save({ enabled: true, timezone: "Asia/Kolkata", captureChats: ["self", FAMILY], ...settings });
   db.chats.remember([{ id: FAMILY, subject: "Family" }]);
-  return { db, bridge, capture: createCapture({ db, bridge, scheduler, log: silentLog, clock, claude }), at: (iso) => (now = new Date(iso)) };
+  return { db, bridge, capture: createCapture({ db, bridge, scheduler, log: silentLog, clock, claude, dataDir }), at: (iso) => (now = new Date(iso)) };
 }
 
 /* Stands in for claude.mjs's reader: answers by the message's words. */
@@ -327,4 +330,102 @@ test("“delete” that answers no message of the app's is read like any other",
   const { db, bridge, capture } = setup([inFamily("A", "delete", { marked: false, quoted_id: "someone-elses-message" })], { captureEvery: [FAMILY] }, claude);
   assert.equal(await capture.poll(), 0);
   assert.deepEqual([claude.asked, bridge.sent, db.events.count()], [["A"], [], 0]);
+});
+
+test("“delete all …” is read only from a message made of those words, and needs “all” or a range", () => {
+  assert.deepEqual(readBulkDelete("delete all calendar for this week"), { range: "this week", kinds: "both" });
+  assert.deepEqual(readBulkDelete("Delete all calendar for this month"), { range: "this month", kinds: "both" });
+  assert.deepEqual(readBulkDelete("delete all calendar"), { range: "all", kinds: "both" });
+  assert.deepEqual(readBulkDelete("please delete everything!"), { range: "all", kinds: "both" });
+  assert.deepEqual(readBulkDelete("clear this week’s calendar"), { range: "this week", kinds: "both" });
+  assert.deepEqual(readBulkDelete("remove tasks for today"), { range: "today", kinds: "tasks" });
+  assert.deepEqual(readBulkDelete("cancel all appointments tomorrow"), { range: "tomorrow", kinds: "events" });
+  for (const no of ["delete", "cancel", "delete calendar", "delete the doc one", "delete all photos", "I deleted everything already"]) assert.equal(readBulkDelete(no), null, no);
+  assert.deepEqual(rangeOf("this week", "2026-10-08"), { from: "2026-10-04", to: "2026-10-10", label: "this week (Sun 4 Oct – Sat 10 Oct)" });
+  assert.deepEqual(rangeOf("next month", "2026-12-08"), { from: "2027-01-01", to: "2027-01-31", label: "next month (January 2027)" });
+  assert.equal(rangeOf("all", "2026-10-08"), null);
+});
+
+test("“delete all …”: counted and asked first; “yes” in reply deletes just that — after a copy is kept", async () => {
+  const dataDir = mkdtempSync(join(tmpdir(), "bdr-copies-"));
+  try {
+    const claude = fakeClaude({});
+    const { db, bridge, capture, at } = setup([], { captureEvery: [FAMILY], calendarTo: FAMILY }, claude, { dataDir });
+    const thisWeek = db.events.create({ title: "Dentist", day: "2026-10-09", time: "10:00" });
+    const nextWeek = db.events.create({ title: "Lunch", day: "2026-10-13", time: "13:00" });
+    db.events.create({ title: "Choir", day: "2026-09-30", time: "18:30", repeat: "weekly" });
+    const dueSat = db.tasks.create({ title: "Pay rent", due: "2026-10-10" });
+    db.tasks.create({ title: "Sort photos" });
+    bridge.held = [inFamily("A", "delete all calendar for this week", { marked: false })];
+    await capture.poll();
+    assert.equal(bridge.sent[0].text, "⚠️ Delete 1 event and 1 task — this week (Sun 4 Oct – Sat 10 Oct)?\nReply *yes* to this message within 10 minutes to delete them.\nRepeating events are kept: Choir — delete them in Wish Calendar → Calendar.");
+    assert.equal(db.events.count(), 3, "nothing deleted yet");
+    assert.deepEqual(claude.asked, [], "Claude is not asked");
+
+    const question = db.deliveries.get("capture:A").message_id;
+    at("2026-10-08T05:04:00Z");
+    bridge.held = [inFamily("B", "Yes", { marked: false, quoted_id: question })];
+    await capture.poll();
+    assert.equal(bridge.sent[1].text, "🗑️ Deleted 1 event and 1 task — this week (Sun 4 Oct – Sat 10 Oct).");
+    assert.deepEqual([db.events.get(thisWeek), db.tasks.get(dueSat)], [null, null]);
+    assert.ok(db.events.get(nextWeek), "next week's stays");
+    assert.deepEqual(db.tasks.open().map((t) => t.title), ["Sort photos"]);
+    assert.equal(readdirSync(dataDir).filter((f) => f.startsWith("before-delete-")).length, 1, "a copy from before");
+
+    bridge.held = [inFamily("C", "yes", { marked: false, quoted_id: question })];
+    await capture.poll();
+    assert.equal(bridge.sent[2].text, "Those were deleted already.");
+  } finally {
+    rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("“delete all …”: no “yes” within ten minutes, or any other answer, deletes nothing — and it is not for a group others share", async () => {
+  const { db, bridge, capture, at } = setup([], { captureChats: ["self", "120363000000000002@g.us"], captureEvery: [FAMILY], calendarTo: FAMILY }, fakeClaude({}));
+  db.events.create({ title: "Dentist", day: "2026-10-09", time: "10:00" });
+  bridge.held = [inFamily("A", "delete all", { marked: false }), inFamily("B", "delete all this week", { marked: false })];
+  await capture.poll();
+  assert.match(bridge.sent[0].text, /^⚠️ Delete 1 event — everything on the calendar\?/);
+  const [first, second] = ["capture:A", "capture:B"].map((k) => db.deliveries.get(k).message_id);
+  at("2026-10-08T05:11:00Z");
+  bridge.held = [inFamily("C", "yes", { marked: false, quoted_id: first }), inFamily("D", "no, leave it", { marked: false, quoted_id: second })];
+  await capture.poll();
+  assert.deepEqual(bridge.sent.slice(2).map((s) => s.text), [
+    "That was more than 10 minutes ago, so nothing was deleted. Send it again to start over.",
+    "Nothing was deleted.",
+  ]);
+  assert.equal(db.events.count(), 1);
+
+  bridge.held = [inFamily("E", "📅 delete all", { chat_id: "120363000000000002@g.us", text: "delete all" })];
+  await capture.poll();
+  assert.equal(bridge.sent.at(-1).text, "“Delete all …” works in Message yourself, and in a group where every message counts — not here.");
+  assert.equal(db.events.count(), 1);
+});
+
+test("“remind me to …”: a reminder the next morning at the morning time — or when the message says", async () => {
+  assert.equal(readReminder("remind me to call Renjith"), "call Renjith");
+  assert.equal(readReminder("Remind to call Renjith"), "call Renjith");
+  assert.equal(readReminder("set a reminder to buy milk"), "buy milk");
+  assert.equal(readReminder("reminders are great"), null);
+
+  const { db, bridge, capture } = setup([command("A", "remind me to call Renjith"), command("B", "remind me at 5pm to pay the electricity bill")]);
+  assert.equal(await capture.poll(), 2);
+  const [renjith] = db.events.between("2026-10-09", "2026-10-09");
+  assert.deepEqual([renjith.title, renjith.day, renjith.time, renjith.remind], ["Call Renjith", "2026-10-09", "07:00", 0], "10:00 on the 8th: the next morning");
+  const [bill] = db.events.between("2026-10-08", "2026-10-08");
+  assert.deepEqual([bill.title, bill.time, bill.remind], ["Pay the electricity bill", "17:00", 0]);
+  assert.equal(bridge.sent[0].text, "⏰ Reminder set: *Call Renjith*\nFri 9 Oct, 07:00\n\nNot right? Reply “delete” to this, or change it in Wish Calendar → Calendar.");
+
+  const early = setup([command("C", "remind me to water the plants", { sent_at: "2026-10-08T00:30:00.000Z" })], { morningTime: "06:30" }); // 06:00 in India
+  await early.capture.poll();
+  const [plants] = early.db.events.between("2026-10-08", "2026-10-08");
+  assert.deepEqual([plants.title, plants.day, plants.time], ["Water the plants", "2026-10-08", "06:30"], "before the morning time: that same morning");
+});
+
+test("a reminder read by Claude keeps the day and time Claude found", async () => {
+  const claude = fakeClaude({ "remind me to call Renjith after lunch tomorrow": { kind: "event", title: "Call Renjith", day: "2026-10-09", endDay: null, time: "14:00", endTime: "" } });
+  const { db, capture } = setup([inFamily("A", "remind me to call Renjith after lunch tomorrow", { marked: false })], { captureEvery: [FAMILY] }, claude);
+  await capture.poll();
+  const [call] = db.events.between("2026-10-09", "2026-10-09");
+  assert.deepEqual([call.title, call.time, call.remind], ["Call Renjith", "14:00", 0]);
 });
