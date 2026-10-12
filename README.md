@@ -1,14 +1,10 @@
-# Wish Calendar
+# Ormma
 
-Birthday and anniversary wishes for a community, sent on WhatsApp.
+*ഓർമ്മ — Malayalam for memory.* Your diary and reminders, with WhatsApp as the way in and out.
 
-Keep the list in the app: 🎂 birthdays, and 💍 anniversaries (a couple's wedding day). For each one you choose where the wish goes — **a WhatsApp group, or straight to their own number** — what it says, and at what time. Every day it:
-
-- sends **you a morning reminder** — every wish the day holds (its time, where it goes, what it says) and the birthdays and anniversaries coming up — to the linked phone, your own number, or a group,
-- sends **each wish** at its time, to where its row says, and
-- **tells you when a wish was not sent**, which one and why, so none is missed quietly.
-
-It is your calendar and notebook too: [events and tasks](#the-calendar), with reminders on WhatsApp to you, and [notes and a journal page for each day](#notes-and-the-journal), with #tags and search.
+- **A diary** — notes, and a journal page for each day, with #tags and search: [Notes and the journal](#notes-and-the-journal).
+- **A calendar, and reminders that keep coming until done** — events and tasks, added on the page or from WhatsApp: send `📅 Dentist Tue 10am` or `remind me to call Renjith`. Each morning “Your day” lists what the day holds: [The calendar](#the-calendar).
+- **The people to remember** — 🎂 birthdays and 💍 anniversaries, each wished on WhatsApp at its time, in a group or straight to their own number, with a morning reminder to you of every wish the day holds, and an alert when one was not sent.
 
 It runs on a computer that stays on — a Mac, directly, with nothing but Node; or any computer with Docker — and you use it in the browser at `http://localhost:3210`.
 
@@ -143,13 +139,13 @@ When a wish is not sent, the app tells you on WhatsApp — on the linked phone, 
 - **the next morning**, at the reminder time, for the wishes of a day that ended before they could go — the computer was off or asleep, or WhatsApp was not connected, until midnight.
 
 ```
-⚠️ Wish Calendar: a wish was not sent
+⚠️ Ormma: a wish was not sent
 
 🎂 Biju Thomas → St. Mary's Youth · 08:00
 The linked WhatsApp number is not a member of this group. Add it to the group, then retry.
 It is tried again every 10 minutes, 5 more times.
 
-To send it now: Wish Calendar → Today → Retry now.
+To send it now: Ormma → Today → Retry now.
 ```
 
 An alert is a WhatsApp message like the others: while WhatsApp is not connected it waits, and it goes out once it can (within 3 days). It is sent *from* the linked number — so if that is your own number, WhatsApp does not notify you of it (to WhatsApp it is a message you sent); it waits in *Message yourself*. With a spare number linked, alerts to your own number (*My number*) notify you like any message. **Send a test alert** in Settings shows you one.

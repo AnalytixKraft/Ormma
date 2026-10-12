@@ -7,7 +7,10 @@ import { html, raw } from "./html.mjs";
 
 /* What the app is called on its pages. (Inside, it keeps its first name —
  * the Docker project, the volumes, the cookie — so a rename loses nothing.) */
-export const APP_NAME = "Wish Calendar";
+export const APP_NAME = "Ormma";
+/* Malayalam for memory, remembrance — a diary, reminders, and the people to
+ * remember on their day. */
+export const APP_TAGLINE = "ഓർമ്മ — your diary and reminders";
 
 export const iconOf = (kind) => KIND_ICON[kind] ?? KIND_ICON.birthday;
 export const occasionWord = (kind) => (kind === "anniversary" ? "anniversary" : "birthday");
@@ -102,6 +105,7 @@ export function signInPage({ today, error, assets }) {
   ${leaf({ date: today, size: "small", heading: "p" })}
   <form method="post" action="/login" class="card signin__form">
     <h1>${APP_NAME}</h1>
+    <p class="signin__tagline">${APP_TAGLINE}</p>
     <label class="field">
       <span class="field__label">Password</span>
       <input type="password" name="password" autocomplete="current-password" required autofocus>

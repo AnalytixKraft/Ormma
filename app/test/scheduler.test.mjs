@@ -288,13 +288,13 @@ test("a wish refused for a reason someone must fix: an alert at once, to the lin
   assert.equal(
     alert.text,
     [
-      "⚠️ *Wish Calendar: a wish was not sent*",
+      "⚠️ *Ormma: a wish was not sent*",
       "",
       "🎂 *Biju* → Youth · 08:00",
       "The linked WhatsApp number is not a member of this group. Add it to the group, then retry.",
       "It is tried again every 10 minutes, 5 more times.",
       "",
-      "To send it now: Wish Calendar → Today → Retry now.",
+      "To send it now: Ormma → Today → Retry now.",
     ].join("\n"),
   );
   for (const t of ["2026-09-30T03:10:00Z", "2026-09-30T03:20:00Z"]) {
@@ -352,13 +352,13 @@ test("wishes of a day that ended before they went: one alert the next morning, w
   assert.equal(
     alerts[0].text,
     [
-      "⚠️ *Wish Calendar: 2 wishes were not sent on Wed 30 Sep*",
+      "⚠️ *Ormma: 2 wishes were not sent on Wed 30 Sep*",
       "",
       "🎂 *Anu Joseph* → +447700900001 · 08:00",
       "🎂 *Biju* → Youth · 08:00",
       "Not tried before the day ended: this computer was off or asleep, or WhatsApp was not connected.",
       "",
-      "To wish them late: Wish Calendar → People → Send now.",
+      "To wish them late: Ormma → People → Send now.",
     ].join("\n"),
   );
 
@@ -387,12 +387,12 @@ test("the next morning tells of a wish still failing when its day ended — with
   assert.equal(
     morning.text,
     [
-      "⚠️ *Wish Calendar: a wish was not sent on Wed 30 Sep*",
+      "⚠️ *Ormma: a wish was not sent on Wed 30 Sep*",
       "",
       "🎂 *Biju* → Youth · 08:00",
       "WhatsApp did not take the message: timed out",
       "",
-      "To wish them late: Wish Calendar → People → Send now.",
+      "To wish them late: Ormma → People → Send now.",
     ].join("\n"),
   );
   assert.ok(db.deliveries.get(`wish:2026-09-30:${biju}`).alerted_at);
@@ -413,7 +413,7 @@ test("a new install looks back no further than today; so does sending turned bac
 
 test("an alert that could not go for 3 days is dropped, and says so on the page", async () => {
   const { db, bridge, scheduler } = setup("2026-09-30T20:00:00Z"); // 01:30 IST on 1 Oct
-  db.alerts.create({ key: "alert:missed:2026-09-26", day: "2026-09-27", text: "⚠️ *Wish Calendar: a wish was not sent on Sat 26 Sep*" }, "2026-09-27T01:31:00.000Z");
+  db.alerts.create({ key: "alert:missed:2026-09-26", day: "2026-09-27", text: "⚠️ *Ormma: a wish was not sent on Sat 26 Sep*" }, "2026-09-27T01:31:00.000Z");
   await scheduler.run();
   assert.equal(alertsSent(bridge).length, 0);
   const dropped = db.deliveries.get("alert:missed:2026-09-26");
@@ -426,7 +426,7 @@ test("a test alert goes where alerts go, and is never sent again on its own", as
   db.settings.save({ alertTo: "direct", myPhone: MY_PHONE });
   const to = await scheduler.sendTestAlert();
   assert.equal(to.id, `${MY_PHONE}@s.whatsapp.net`);
-  assert.match(bridge.sent.at(-1).text, /^⚠️ \*Wish Calendar: test alert\*\n\nThis is how an alert looks/);
+  assert.match(bridge.sent.at(-1).text, /^⚠️ \*Ormma: test alert\*\n\nThis is how an alert looks/);
   assert.match(db.deliveries.get(bridge.sent.at(-1).key).text, /test alert/);
 
   at("2026-09-30T03:01:00Z");

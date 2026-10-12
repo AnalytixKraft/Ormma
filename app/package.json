@@ -2,7 +2,7 @@
   "name": "birthday-reminder-app",
   "version": "0.1.0",
   "private": true,
-  "description": "Birthday wishes and reminders over WhatsApp, for a small community. See ../README.md.",
+  "description": "Ormma: a personal diary, calendar and reminders — and birthday wishes — over WhatsApp. See ../README.md.",
   "license": "MIT",
   "type": "module",
   "main": "src/main.mjs",

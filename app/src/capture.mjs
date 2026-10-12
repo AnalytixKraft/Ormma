@@ -229,13 +229,13 @@ export function renderCaptureReply(item) {
     const days = item.endDay ? `${short(item.day)} – ${short(item.endDay)}` : short(item.day);
     const when = `${days}, ${timeRange(item) || "all day"}`;
     const reminder = item.remind === null || item.remind === undefined ? [] : [`Reminder ${reminderLabel(item.remind).toLowerCase()}.`];
-    return [`✅ Added to the calendar: *${item.title}*${by}`, when, ...reminder, "", "Not right? Change it in Wish Calendar → Calendar."].join("\n");
+    return [`✅ Added to the calendar: *${item.title}*${by}`, when, ...reminder, "", "Not right? Change it in Ormma → Calendar."].join("\n");
   }
   return [
     `✅ Added a task: *${item.title}*${item.due ? ` — due ${short(item.due)}` : ""}${by}`,
     ...(item.why ? [item.why] : []),
     "",
-    "Not right? Change it in Wish Calendar → Calendar.",
+    "Not right? Change it in Ormma → Calendar.",
   ].join("\n");
 }
 
@@ -397,7 +397,7 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     const kept = bulk.kinds === "tasks" || !span ? [] : inRange.filter((e) => e.repeat && occurrencesBetween(e, span.from, span.to).length);
     const tasks = bulk.kinds === "events" ? [] : span ? db.tasks.dueBetween(span.from, span.to) : db.tasks.all();
     const label = span ? span.label : "everything on the calendar";
-    const keptLine = kept.length ? [`Repeating events are kept: ${kept.map((e) => e.title).join(", ")} — delete them in Wish Calendar → Calendar.`] : [];
+    const keptLine = kept.length ? [`Repeating events are kept: ${kept.map((e) => e.title).join(", ")} — delete them in Ormma → Calendar.`] : [];
     if (!events.length && !tasks.length) return { title: "Delete all", text: [`Nothing to delete — ${label}.`, ...keptLine].join("\n") };
     db.bulkDeletes.create({ messageId: command.id, label, events: events.map((e) => e.id), tasks: tasks.map((t) => t.id) }, clock().toISOString());
     return {
@@ -475,7 +475,7 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     const stop = isDelete(command.text) || (isDone(command.text) && event?.reminder);
     if (!stop) return null;
     if (!event) return { title, text: `*${title}* was deleted already.` };
-    if (event.repeat) return { title, text: `*${title}* repeats ${repeatLabel(event.repeat).toLowerCase()} — delete it in Wish Calendar → Calendar.` };
+    if (event.repeat) return { title, text: `*${title}* repeats ${repeatLabel(event.repeat).toLowerCase()} — delete it in Ormma → Calendar.` };
     db.events.remove(event.id);
     log.info({ message_id: command.id, reminder: event.reminder }, "📅 message: a reminder answered"); // never its text
     return { title, text: event.reminder ? `✅ Done: *${title}* — no more reminders.` : `🗑️ Deleted: *${title}*` };
@@ -493,7 +493,7 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     if (!added?.kind) return null; // an answer to a delete, say
     const title = answered.title ?? "it";
     if (!isDelete(command.text) && !isDone(command.text)) {
-      return { title, text: `Only “delete” works as a reply to that. To change *${title}*, open Wish Calendar → Calendar.` };
+      return { title, text: `Only “delete” works as a reply to that. To change *${title}*, open Ormma → Calendar.` };
     }
     // Deleted, its item is forgotten (db.mjs, migration 10); and an id is
     // used again, so the title must still be the one that was added.

@@ -105,7 +105,7 @@ test("migration 5 keeps what was sent, and makes room for alerts", () => {
     const db = openDb(file);
     const kept = db.deliveries.get("wish:2026-09-30:1");
     assert.deepEqual([kept.status, kept.message_id, kept.chat_subject, kept.updated_at, kept.text, kept.alerted_at], ["sent", "M1", "Youth", "2026-09-30T02:30:01Z", null, null]);
-    db.alerts.create({ key: "alert:wish:2026-09-30:1", day: "2026-09-30", text: "⚠️ *Wish Calendar: a wish was not sent*", about: ["wish:2026-09-30:1"] }, "2026-09-30T03:00:00.000Z");
+    db.alerts.create({ key: "alert:wish:2026-09-30:1", day: "2026-09-30", text: "⚠️ *Ormma: a wish was not sent*", about: ["wish:2026-09-30:1"] }, "2026-09-30T03:00:00.000Z");
     assert.equal(db.deliveries.get("wish:2026-09-30:1").alerted_at, "2026-09-30T03:00:00.000Z");
     assert.deepEqual(db.alerts.unsent("2026-09-30T00:00:00.000Z").map((a) => [a.key, a.kind, a.status, a.attempts]), [["alert:wish:2026-09-30:1", "alert", "pending", 0]]);
     assert.deepEqual(db.alerts.unsent("2026-09-30T03:00:00.001Z"), [], "only those made since");
@@ -176,7 +176,7 @@ test("migration 7 keeps every message sent, alerts' text included, and adds the 
     const file = join(dir, "birthdays.db");
     firstVersionDb(file);
     let db = openDb(file);
-    db.alerts.create({ key: "alert:missed:2026-09-29", day: "2026-09-30", text: "⚠️ *Wish Calendar: a wish was not sent*" }, "2026-09-30T01:30:00.000Z");
+    db.alerts.create({ key: "alert:missed:2026-09-29", day: "2026-09-30", text: "⚠️ *Ormma: a wish was not sent*" }, "2026-09-30T01:30:00.000Z");
     db.close();
     // Back to version 6, with that alert in a deliveries table without `title`.
     const raw = new DatabaseSync(file);
@@ -185,7 +185,7 @@ test("migration 7 keeps every message sent, alerts' text included, and adds the 
 
     db = openDb(file);
     const alert = db.deliveries.get("alert:missed:2026-09-29");
-    assert.deepEqual([alert.kind, alert.status, alert.text, alert.title], ["alert", "pending", "⚠️ *Wish Calendar: a wish was not sent*", null]);
+    assert.deepEqual([alert.kind, alert.status, alert.text, alert.title], ["alert", "pending", "⚠️ *Ormma: a wish was not sent*", null]);
     db.deliveries.begin({ key: "event:1:2026-09-30:60", day: "2026-09-30", kind: "event", title: "Dentist", to: { id: "447700900077@s.whatsapp.net", label: "the linked phone" } }, "2026-09-30T03:30:00.000Z");
     assert.equal(db.deliveries.get("event:1:2026-09-30:60").title, "Dentist");
 

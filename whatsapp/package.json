@@ -2,7 +2,7 @@
   "name": "birthday-reminder-whatsapp-bridge",
   "version": "0.1.0",
   "private": true,
-  "description": "Posts text into WhatsApp groups through a linked device, for the birthday reminder app. See README.md.",
+  "description": "The WhatsApp side of Ormma: posts text through a linked device, and hands over 📅 messages. See README.md.",
   "license": "MIT",
   "type": "module",
   "main": "src/main.mjs",
