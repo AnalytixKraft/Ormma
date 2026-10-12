@@ -34,6 +34,7 @@ test("a 📅 message in a chosen group — from anyone in it — or in Message y
     quoted: null,
     quoted_id: null,
     marked: true,
+    mark: "calendar",
     from_me: true,
     sender: null,
   });
@@ -60,7 +61,8 @@ test("nothing is taken from a chat not chosen, nor without the mark", () => {
 });
 
 test("a calendar emoji that does not make a 📅 message is said so in the log, without the message", () => {
-  assert.deepEqual(read({ text: "Dentist on Tue 📅" }), { skipped: "the 📅 is not at the start" });
+  assert.deepEqual(read({ text: "Dentist on Tue 📅" }), { skipped: "the 📅 or 📝 is not at the start" });
+  assert.deepEqual(read({ text: "Coffee with Tom 📝" }), { skipped: "the 📅 or 📝 is not at the start" });
   assert.deepEqual(read({ text: "🗓️ Dentist Tue 10am" }), { skipped: "it starts with 🗓️, which is not 📅 or 📆" });
   assert.deepEqual(read({ at: sent(3 * 24 * 60) }), { skipped: "it arrived more than 2 days after it was sent" });
   assert.equal(read({ chat: OTHER_GROUP, text: "Dentist 📅" }), null, "nor anything from a chat not chosen");
@@ -75,6 +77,15 @@ test("in a group where every message counts, each one with text is held — mark
   assert.equal(read({ content: { stickerMessage: {} } }, chosen, every), null, "no text");
   assert.equal(read({ chat: OTHER_GROUP, text: "Doctor tue 10 am" }, new Set(["self", OTHER_GROUP]), every), null, "only where every message counts");
   assert.equal(read({ chat: ME, text: "Doctor tue 10 am" }, chosen, every), null, "Message yourself still needs the 📅");
+});
+
+test("a 📝 message is held like a 📅 one, and says which mark it had", () => {
+  const note = command({ text: "📝 Coffee with Tom, he’s doing well" });
+  assert.deepEqual([note.mark, note.marked, note.text], ["note", true, "Coffee with Tom, he’s doing well"]);
+  assert.deepEqual([command({ text: "📝️Lunch was good" }).mark, command({ text: "📆 Pay rent Fri" }).mark], ["note", "calendar"]);
+  assert.equal(read({ chat: ME, text: "📝 to myself" }).command.chat, "self");
+  const plain = read({ fromMe: false, text: "Doctor tue 10 am" }, chosen, new Set([GROUP])).command;
+  assert.deepEqual([plain.marked, plain.mark], [false, null]);
 });
 
 test("a reply of 📅 carries the line it replies to; wrapped and captioned messages count", () => {

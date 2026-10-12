@@ -180,7 +180,7 @@ test("migration 7 keeps every message sent, alerts' text included, and adds the 
     db.close();
     // Back to version 6, with that alert in a deliveries table without `title`.
     const raw = new DatabaseSync(file);
-    raw.exec(`DROP TABLE bulk_deletes; DROP TABLE captures; DROP TABLE events; DROP TABLE tasks; ALTER TABLE deliveries DROP COLUMN title; PRAGMA user_version = 6;`);
+    raw.exec(`DROP TRIGGER notes_forgotten; DROP TABLE bulk_deletes; DROP TABLE captures; DROP TABLE events; DROP TABLE tasks; ALTER TABLE deliveries DROP COLUMN title; PRAGMA user_version = 6;`);
     raw.close();
 
     db = openDb(file);
@@ -225,7 +225,7 @@ test("migration 10: the reminders set before keep reminding, and old ✅s let go
     // used again by a reminder; a "remind me" from before.
     const raw = new DatabaseSync(file);
     raw.exec(`
-      DROP TRIGGER events_forgotten; DROP TRIGGER tasks_forgotten; ALTER TABLE events DROP COLUMN reminder; PRAGMA user_version = 9;
+      DROP TRIGGER events_forgotten; DROP TRIGGER tasks_forgotten; DROP TRIGGER notes_forgotten; ALTER TABLE events DROP COLUMN reminder; PRAGMA user_version = 9;
       INSERT INTO events (id, title, day, time, remind, created_at) VALUES (2, 'Call pembernotti', '2026-10-13', '07:00', 0, '2026-10-12T08:00:00Z');
       INSERT INTO events (id, title, day, time, created_at) VALUES (3, 'Hospital', '2026-10-13', '10:00', '2026-10-08T17:09:05Z');
       INSERT INTO captures (message_id, chat_id, sent_at, text, kind, item_id, created_at) VALUES
@@ -243,4 +243,28 @@ test("migration 10: the reminders set before keep reminding, and old ✅s let go
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("migration 11: a 📝 message is a line on the day's page, taken off again by what it wrote; the old triggers survive the swap", () => {
+  const db = openDb(":memory:");
+  const message = (id, text) => ({ id, chat_id: "447700900077@s.whatsapp.net", sent_at: "2026-10-08T04:30:00.000Z", text, quoted: null });
+  const first = db.journal.append("2026-10-08", "10:00 — Coffee with Tom");
+  assert.equal(db.journal.append("2026-10-08", "16:05 — Plumber comes Thursday"), first, "the same page");
+  assert.equal(db.journal.get("2026-10-08").body, "10:00 — Coffee with Tom\n\n16:05 — Plumber comes Thursday");
+  assert.equal(db.captures.record(message("A", "Coffee with Tom"), "note", first, "10:00 — Coffee with Tom"), true);
+  assert.deepEqual([db.captures.get("A").kind, db.captures.get("A").item_id, db.captures.get("A").added], ["note", first, "10:00 — Coffee with Tom"]);
+  assert.equal(db.journal.removeChunk("2026-10-08", "10:00 — Coffee with Tom"), true);
+  assert.equal(db.journal.get("2026-10-08").body, "16:05 — Plumber comes Thursday");
+  assert.equal(db.journal.removeChunk("2026-10-08", "10:00 — Coffee with Tom"), false, "not there any more");
+  assert.equal(db.journal.removeChunk("2026-10-08", "16:05 — Plumber comes Thursday"), true);
+  assert.equal(db.journal.get("2026-10-08"), null, "the last line off: the page goes");
+  assert.equal(db.captures.get("A").item_id, null, "and the message forgets it");
+
+  // The triggers from before, made again after the table swap.
+  const event = db.events.create({ title: "Dentist", day: "2026-10-13", time: "10:00" });
+  db.captures.record(message("B", "Dentist Tue 10am"), "event", event);
+  db.events.remove(event);
+  assert.equal(db.captures.get("B").item_id, null);
+  assert.equal(db.captures.record(message("C", "x"), "wish", 1), false, "a kind that is none of the three is not recorded");
+  db.close();
 });

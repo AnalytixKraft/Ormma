@@ -1,5 +1,6 @@
 /* Claude reads a WhatsApp message for the calendar (capture.mjs): an event,
- * a task — or, in a group where every message counts, nothing at all.
+ * a task — or, in a group where every message counts, a note for the diary,
+ * or nothing at all.
  *
  * Claude Haiku 5.5, the cheapest model, as the owner asked; low effort. The
  * key is ANTHROPIC_API_KEY in .env (config.mjs) — with ANTHROPIC_WORKSPACE_ID
@@ -34,7 +35,7 @@ export class ClaudeFailed extends Error {
 const SCHEMA = {
   type: "object",
   properties: {
-    kind: { type: "string", enum: ["event", "task", "none"] },
+    kind: { type: "string", enum: ["event", "task", "note", "none"] },
     title: { type: "string" },
     day: { type: "string" },
     end_day: { type: "string" },
@@ -50,7 +51,8 @@ const SYSTEM = `You read one WhatsApp message for a personal calendar app, and s
 Answer with the JSON the schema asks for:
 - kind "event": something that happens on a day — an appointment, a meeting, a visit, a trip, a class, a function to go to.
 - kind "task": something to do, by a day or at any time — pay a bill, buy something, call someone.
-- kind "none": nothing for a calendar — a greeting, thanks, a question, chat, a link. Only for a message NOT marked with 📅: a marked one is always an event or a task.
+- kind "note": for the diary — what happened, how the day went, a thought, something to keep — in a message that is neither an appointment nor a to-do. Only for a message NOT marked with 📅.
+- kind "none": nothing for a calendar or a diary — a greeting, thanks, a question to someone, chat, a link alone. Only for a message NOT marked with 📅: a marked one is always an event or a task.
 - title: short, in the message's own language and words, without the day or the time — "Dentist", "Trip to Munnar", "Pay rent". At most 80 characters.
 - day: YYYY-MM-DD — the event's day, or the task's due day; "" when the message gives none (a task with no due day). An event with a time and no day: today if that time is still to come, else tomorrow.
 - end_day: YYYY-MM-DD for an event over several days, else "".
@@ -69,8 +71,8 @@ const realDay = (day) => DAY.test(day) && shiftDay(day, 0) === day;
  * when it will not do: a day that is no day, an event with none, one before
  * the day the message was sent. */
 export function checkReading(out, sentDay) {
-  if (!out || !["event", "task", "none"].includes(out.kind)) throw new ClaudeFailed("an answer that is not one");
-  if (out.kind === "none") return { kind: "none" };
+  if (!out || !["event", "task", "note", "none"].includes(out.kind)) throw new ClaudeFailed("an answer that is not one");
+  if (out.kind === "none" || out.kind === "note") return { kind: out.kind };
   const title = String(out.title ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_TITLE) || "Untitled";
   const day = String(out.day ?? "");
   if (day && (!realDay(day) || day < sentDay || day > shiftDay(sentDay, 5 * 366))) throw new ClaudeFailed("a day that will not do");

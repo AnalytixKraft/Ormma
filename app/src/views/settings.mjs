@@ -180,7 +180,7 @@ ${whatsappSection(wa)}
       <span class="hint">“remind me to call Renjith” on WhatsApp: the next morning at this time — unless it says when.</span>
     </label>
     <input type="hidden" name="captureShown" value="1">
-    <label class="check check--big"><input type="checkbox" name="capture" value="1"${values.capture ? raw(" checked") : ""}> <span><strong>Add to the calendar from WhatsApp</strong><br><span class="hint">A message that starts with 📅, in a chat ticked below, goes on the calendar: <code>📅 Dentist Tue 10am</code>, <code>📅 Trip 10-13 Oct</code>, <code>📅 task Pay rent by Fri</code> — or a reply of 📅 to a message, to add what it says. The answer goes where calendar messages go.</span></span></label>
+    <label class="check check--big"><input type="checkbox" name="capture" value="1"${values.capture ? raw(" checked") : ""}> <span><strong>Add to the calendar from WhatsApp</strong><br><span class="hint">A message that starts with 📅, in a chat ticked below, goes on the calendar: <code>📅 Dentist Tue 10am</code>, <code>📅 Trip 10-13 Oct</code>, <code>📅 task Pay rent by Fri</code> — or a reply of 📅 to a message, to add what it says. One that starts with <strong>📝</strong> is written on that day’s journal page, with the time. The answers go where calendar messages go.</span></span></label>
     ${capturePicks(values, groups, claudeModel, claudeStatus)}
   </fieldset>
 

@@ -230,7 +230,9 @@ The app's messages come *from* the linked number. If that is your own number, Wh
 - **Search** finds notes and journal pages that have every word you type, as the start of a word: `dent tues` finds “Dentist on Tuesday”. Accents do not matter.
 - `*bold*`, `_italic_` and links work, as in WhatsApp. ⌘ (or Ctrl) + Enter saves, and leaving a page with writing not yet saved asks first.
 
-Nothing in the notebook is sent anywhere. It is in the same database file as the list, so `scripts/backup.sh` keeps it too — keep those backups as private as the notes themselves.
+**Notes from your phone.** Start a WhatsApp message with 📝, in a chat ticked under *Settings → Calendar → Where 📅 messages count*, and it is written on that day's journal page — the time it was sent, then your words — under whatever is there already: `📝 Coffee with Tom, he's doing well`. Send as many as you like through the day; they land on the one page, in order, so the day's notes are together by the end of it. Reply 📝 to someone's message to keep it (quoted) on the page. In a group where every message counts, `note:` or `diary:` at the start does the same, and Claude writes down what reads like a diary entry even without one — what happened, a thought — and lets chat go. The answer — “📓 Noted on today's page (14:32)” — comes where calendar messages go; reply `delete` to it and the line comes off the page again.
+
+Nothing written in the app is sent anywhere. It is in the same database file as the list, so `scripts/backup.sh` keeps it too — keep those backups as private as the notes themselves.
 
 ## Keep it running
 
