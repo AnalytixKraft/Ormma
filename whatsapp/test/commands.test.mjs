@@ -88,6 +88,20 @@ test("a 📝 message is held like a 📅 one, and says which mark it had", () =>
   assert.deepEqual([plain.marked, plain.mark], [false, null]);
 });
 
+test("“Note:”, “Notes:” or “Journal:” at the start does what the 📝 does — any case, the colon needed", () => {
+  for (const text of ["Notes: Coffee with Tom", "note:Coffee with Tom", "  NOTES : Coffee with Tom", "Journal: Coffee with Tom"]) {
+    const note = command({ text });
+    assert.deepEqual([note.mark, note.marked, note.text], ["note", true, "Coffee with Tom"], text);
+  }
+  assert.equal(read({ chat: ME, text: "Notes: to myself" }).command.mark, "note", "in Message yourself too");
+  assert.equal(command({ text: "Note:" }).text, "", "a reply of just “Note:” keeps the message it replies to");
+  assert.equal(read({ text: "Notes from the meeting" }), null, "no colon: not a note");
+  assert.equal(read({ text: "Footnote: page 3" }), null, "only at the start of the message");
+  assert.equal(read({ text: "See notes: page 3" }), null);
+  const plain = read({ fromMe: false, text: "Notebook: buy one" }, chosen, new Set([GROUP])).command;
+  assert.deepEqual([plain.marked, plain.mark], [false, null], "where every message counts, other words stay unmarked");
+});
+
 test("a reply of 📅 carries the line it replies to; wrapped and captioned messages count", () => {
   const reply = command({
     content: {

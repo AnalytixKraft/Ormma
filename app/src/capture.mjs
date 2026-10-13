@@ -20,6 +20,8 @@
  *   📝 Coffee with Tom, he's well    a line on the day's journal page, with
  *                                    the time it was sent — the next one
  *                                    goes below it: the day's notes, merged
+ *   Notes: Coffee with Tom           the same ("Note:", "Journal:" too: the
+ *                                    bridge marks it as it does the 📝)
  *   show notes for yesterday         that page, read back (last week, this
  *                                    month, Monday, 5 Oct: those pages)
  *   delete all calendar for this week

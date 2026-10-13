@@ -32,7 +32,8 @@ keeping the text path only, and adding messages to people's numbers.
   direct messages from an unofficial client are what WhatsApp's spam checks
   look for, and the cap keeps a loop or a leaked token from becoming a burst.
 - Acts on one kind of inbound message only: a **📅 message** — one that
-  starts with 📅 or 📆, in a chat the owner chose in the app (*Settings →
+  starts with 📅 or 📆, or 📝 (or the words `Note:`, `Notes:` or `Journal:`)
+  for the diary, in a chat the owner chose in the app (*Settings →
   Calendar*, sent here as `POST /commands/chats`): a group, where **anyone in
   it** may send one, or the linked account's own chat (*Message yourself*),
   where only it writes ([`src/commands.mjs`](src/commands.mjs)) — or, in a
