@@ -1,7 +1,8 @@
 /* The one kind of inbound message the bridge acts on: a "📅 message" — one
- * that starts with 📅 or 📆 (for the calendar) or 📝 (for the diary), in a
- * chat the owner chose for them in the app's Settings → Calendar: a group
- * they ticked, where ANYONE in it may send one (the owner's choice: a
+ * that starts with 📅 or 📆 (for the calendar) or 📝 (for the diary — or
+ * the words "Note:", "Notes:" or "Journal:", which do the same), in a chat
+ * the owner chose for them in the app's Settings → Calendar: a group they
+ * ticked, where ANYONE in it may send one (the owner's choice: a
  * family's or a team's shared calendar), or the linked account's own chat
  * (Message yourself, "self"), where only it writes. The app turns each into
  * an event, a task, or a line on the day's journal page (`mark` says which
@@ -44,9 +45,11 @@ import { isJidGroup, jidNormalizedUser, normalizeMessageContent, toNumber } from
 /* 📅 (calendar) or 📆 (tear-off calendar) for the calendar, 📝 (memo) for
  * the diary — with or without the emoji variation selector. Not 🗓️ (spiral
  * calendar): "Your day" starts with it; nor 📓, which the app's own answer
- * to a note starts with. */
-export const MARK = /^\s*([\u{1F4C5}\u{1F4C6}]|\u{1F4DD})\uFE0F?\s*/u;
-const markOf = (text) => (MARK.exec(text)?.[1] === "\u{1F4DD}" ? "note" : "calendar");
+ * to a note starts with. For the diary, the words "Note:", "Notes:" or
+ * "Journal:" (any case, the colon needed) do what the 📝 does — easier to
+ * type than an emoji. */
+export const MARK = /^\s*(?:([\u{1F4C5}\u{1F4C6}]|\u{1F4DD})\uFE0F?|(?:notes?|journal)\s*:)\s*/iu;
+const markOf = (text) => (/[\u{1F4C5}\u{1F4C6}]/u.test(MARK.exec(text)?.[1] ?? "") ? "calendar" : "note");
 /* Any such emoji, anywhere: a message meant as a marked one that is not,
  * said so in the log (never the message). */
 const CALENDARS = /[\u{1F4C5}\u{1F4C6}\u{1F5D3}\u{1F4DD}]/u;
