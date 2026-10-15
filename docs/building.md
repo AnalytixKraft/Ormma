@@ -22,7 +22,7 @@ How the code is laid out, how to try it without WhatsApp, and how the desktop do
 
 The pages are rendered on the server; `app/public/app.js` only adds confirmations, the list filter, reading an uploaded file, the live wish preview, QR refresh, the notebook's ⌘ + Enter and unsaved-writing warning, and the calendar's month strip on a phone.
 
-The pages are drawn as a bound diary — the green cover with the gold stamp, the ribbon that marks the open section, the day printed as a diary prints it — in `app/public/style.css`, with no web fonts: Superclarendon, Charter, Gill Sans and Malayalam MN ship with macOS and iOS, and elsewhere the stacks fall back. The icon, `app/public/favicon.svg`, is the Malayalam ഓ as outlines (taken from Malayalam MN with CoreText) on a diary cover; `apple-touch-icon.png` and `icon-512.png` are rendered from it on a Mac with `qlmanage -t -s 1024` and `sips`, and the desktop app's icons by `desktop/icons/make-icons.mjs`.
+The pages are drawn as a bound diary — the green cover with the gold stamp, the ribbon that marks the open section, the day printed as a diary prints it — in `app/public/style.css`, with no web fonts: Superclarendon, Charter, Gill Sans and Malayalam MN ship with macOS and iOS, and elsewhere the stacks fall back. The icon — a leather diary with *Memory* stamped in gold, a quill and a ribbon — is drawn by `desktop/icons/make-icons.mjs`. It writes `app/public/favicon.svg` (the word as outlines, from Baskerville SemiBold with CoreText, so it looks the same with or without the font) and every size made from it: `apple-touch-icon.png`, `icon-512.png`, and the desktop app's `.icns` and `.ico`. Run it on a Mac after changing the drawing.
 
 Every page but sign-in needs the session cookie, every form post must come from the app's own pages, and the Content-Security-Policy allows no inline script and nothing from other sites. Both parts listen on 127.0.0.1 only (in Docker, the compose network is the fence), and every call to the bridge but `/healthz` needs its token.
 
@@ -85,7 +85,7 @@ The downloads are the same app and bridge, with their own Node, and a launcher t
 | `desktop/lib/settings.mjs` | `ormma.env`, the desktop app's `.env`, made on the first run. |
 | `desktop/lib/system.mjs` | Starting at sign-in (a launchd agent on a Mac, the Run key on Windows), messages in a window, opening the browser. |
 | `desktop/shim/` | The native front door, in Go: `Ormma.app/Contents/MacOS/Ormma` and `Ormma.exe`. It finds the bundled Node beside it and hands over to the launcher — on a Mac it becomes Node (launchd watches the process it started); on Windows it runs it with no console window. |
-| `desktop/icons/` | The icons, made from the app's favicon by `make-icons.mjs` (on a Mac). |
+| `desktop/icons/` | The icon: `make-icons.mjs` draws it and makes every size, for the app and the desktop app (on a Mac). |
 | `desktop/windows/installer.nsi` | The Windows installer (NSIS): per user, no administrator; Start menu, Run key, an entry in Settings → Apps; uninstalling keeps the data. |
 | `desktop/test/` | Unit tests, and the smoke tests CI runs on the built downloads. |
 
