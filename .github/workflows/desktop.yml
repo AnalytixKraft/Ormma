@@ -1,0 +1,73 @@
+# The desktop app, built and tried: the Mac .dmg on a Mac, the Windows
+# installer built on Linux and tried on Windows (desktop/test/smoke-*). Used
+# by ci.yml and release.yml; the downloads are left as the run's artifacts.
+#
+# Nothing here can reach WhatsApp: every bridge it starts has no link.
+
+name: Desktop
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  mac:
+    name: Mac app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/shim/go.mod
+      - uses: actions/cache@v4
+        with:
+          path: desktop/.cache
+          key: node-runtimes-${{ hashFiles('desktop/build.mjs') }}
+      - run: node desktop/build.mjs --mac
+      - run: bash desktop/test/smoke-mac.sh dist/Ormma-*-mac.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: dist/Ormma-*-mac.dmg
+          retention-days: 14
+
+  windows:
+    name: Windows installer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: desktop/shim/go.mod
+      - uses: actions/cache@v4
+        with:
+          path: desktop/.cache
+          key: node-runtimes-${{ hashFiles('desktop/build.mjs') }}
+      - run: sudo apt-get update && sudo apt-get install -y nsis
+      - run: node desktop/build.mjs --windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/Ormma-*-windows-setup.exe
+          retention-days: 14
+
+  windows-smoke:
+    name: Windows installer, tried
+    needs: windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows
+          path: dist
+      - shell: pwsh
+        run: ./desktop/test/smoke-windows.ps1 (Get-Item dist/Ormma-*-windows-setup.exe).FullName
