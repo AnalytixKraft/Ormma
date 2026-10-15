@@ -20,11 +20,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: App
-        working-directory: app
-        run: npm ci && npm test
+      # The bridge first: the app's tests try its client against the real
+      # bridge (app/test/bridge.test.mjs), which needs the bridge's packages.
       - name: WhatsApp bridge
         working-directory: whatsapp
+        run: npm ci && npm test
+      - name: App
+        working-directory: app
         run: npm ci && npm test
       - name: Desktop launcher
         working-directory: desktop
