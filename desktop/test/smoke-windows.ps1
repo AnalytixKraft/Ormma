@@ -51,6 +51,8 @@ Say "installed, with its Start menu shortcuts and the Run key"
 $code = Run $ormma
 if ($code -ne 0) { Fail "opening Ormma ended with $code" }
 WaitFor "the first-run page did not answer" { (Health) -match "setup" }
+# Opening it writes the Run key again (desktop/lib/system.mjs, through reg.exe).
+if ((RunValue) -ne "`"$ormma`" serve") { Fail "after opening Ormma, the Run key says: $(RunValue)" }
 $page = (Invoke-WebRequest -UseBasicParsing "http://localhost:$port/").Content
 if ($page -notmatch "Choose a password for Ormma") { Fail "the first-run page is not the first-run page" }
 Say "first-run page up"
