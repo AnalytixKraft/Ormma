@@ -15,3 +15,4 @@ The first release with downloads for Mac and Windows.
 - **The people to remember**: birthdays and anniversaries, wished on WhatsApp at their time, in a group or to their own number; a morning reminder of every wish the day holds; an alert when one was not sent.
 - **Documentation and screenshots**: an install guide, a user guide, and a demo with made-up data that needs no WhatsApp (`node scripts/demo/run.mjs`).
 - The People table has room for a whole phone number, and for a time on a 12-hour clock.
+- **Licence**: the Apache License 2.0, until now MIT. Share Ormma with its NOTICE file, which credits AnalytixKraft.

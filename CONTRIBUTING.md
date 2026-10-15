@@ -35,4 +35,4 @@ That last one is Ormma with made-up data and no WhatsApp, at <http://127.0.0.1:3
 
 ## Licence
 
-Ormma is MIT licensed. By sending a pull request, you agree that what you contribute is under the same licence.
+Ormma is licensed under the [Apache License 2.0](LICENSE). By sending a pull request, you agree that what you contribute is under the same licence (its section 5).
