@@ -5,12 +5,10 @@
  * (commands.mjs says exactly which messages those are, and nothing else
  * inbound is acted on).
  *
- * Adapted from the WhatsApp bridge AnalytixKraft runs for its bug tracker
- * (itself lifted from AnalytixKraft/medha), keeping only what a few messages
- * a day need: the multi-file auth store and its save queue, the creds.json
- * backup, QR pairing with the 515 restart, and a text send. Left behind on
- * purpose: every kind of media, polls, reactions, any message store, and
- * every inbound handler but the one for 📅 messages.
+ * Only what a few messages a day need: the multi-file auth store and its
+ * save queue, the creds.json backup, QR pairing with the 515 restart, and a
+ * text send. Left out on purpose: every kind of media, polls, reactions, any
+ * message store, and every inbound handler but the one for 📅 messages.
  *
  * States (the API reports them verbatim; whatsapp/README.md has the table):
  *   idle        no linked device, and NOT trying — no pairing churn against

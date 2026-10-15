@@ -1,0 +1,10 @@
+Ormma
+Copyright 2026 AnalytixKraft
+
+This product includes software developed by AnalytixKraft
+(https://github.com/AnalytixKraft/Ormma).
+
+Ormma's WhatsApp bridge uses Baileys (MIT), which uses libsignal (GPL-3.0).
+The desktop downloads include both, each with its licence and its source,
+and the Node.js runtime under its own licence (licenses/node.txt). Every
+other package they bundle keeps its licence in its own folder.

@@ -173,7 +173,7 @@ export function seedDemo(file, { now = new Date(), timeZone = DEMO_TIMEZONE } = 
         [-6, "19:40"],
       ],
       [{ title: "Munnar packing list", body: "#travel\n\n- warm jacket — it gets cold at night\n- walking shoes\n- charger and the power bank\n- umbrella (always)\n- tickets for the tea museum" }, [-1, "22:30"]],
-      [{ title: "Choir — Christmas carols", body: "Silent Night — the Malayalam verse first\nJoy to the World\nO Holy Night — Thomas has the solo\n\nExtra practice every Thursday from November. #choir" }, [-4, "21:05"]],
+      [{ title: "Choir — Christmas carols", body: "Silent Night — all three verses\nJoy to the World\nO Holy Night — Thomas has the solo\n\nExtra practice every Thursday from November. #choir" }, [-4, "21:05"]],
       [{ title: "Books to read", body: "- The God of Small Things (again, for book club)\n- Aadujeevitham\n- Chemmeen — for next month\n- Ente Katha\n\n#books" }, [-9, "23:00"]],
       [{ title: "After the check-up", body: "Dr. Sunitha: walk 30 minutes every morning, less sugar in the tea, blood pressure again in December. Drink more water! #health" }, [-12, "18:20"]],
       [{ title: "Amma's fish curry", body: "Kudampuli soaked in warm water. Shallots, ginger, garlic, curry leaves; Kashmiri chilli for the colour, a pinch of turmeric. Coconut oil at the very end, never before. Better the next day. #recipes" }, [-20, "20:10"]],

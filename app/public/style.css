@@ -7,8 +7,8 @@
  * scripts, the day of the year counted off. Sundays in red, as every
  * calendar in Kerala prints them.
  *
- * No web fonts: Superclarendon, Charter, Gill Sans and Malayalam MN ship
- * with macOS and iOS; elsewhere the stacks fall back to what is there. */
+ * No web fonts: Superclarendon, Charter and Gill Sans ship with macOS and
+ * iOS; elsewhere the stacks fall back to what is there. */
 
 :root {
   --ground: #0b2a20;        /* the inside of the cover, behind the page */
@@ -36,7 +36,6 @@
   --font-body: "Charter", "Iowan Old Style", "Palatino", Georgia, serif;
   --font-ui: "Gill Sans", "Gill Sans MT", "Optima", "Avenir Next", "Segoe UI", sans-serif;
   --font-hand: "Noteworthy", "Bradley Hand", "Segoe Print", "Chalkboard SE", cursive;
-  --font-ml: "Malayalam MN", "Malayalam Sangam MN", "Noto Sans Malayalam", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --radius: 4px;
@@ -160,9 +159,7 @@ p { margin: 0 0 0.8em; }
 }
 .brand:hover { text-decoration: none; }
 .brand__mark { width: 30px; height: 30px; flex: none; }
-.brand__text { display: flex; align-items: baseline; gap: 9px; }
-.brand__name { font: 400 1.5rem/1 var(--font-ml); letter-spacing: 0.01em; }
-.brand__latin { font: 500 0.68rem/1 var(--font-ui); letter-spacing: 0.24em; text-transform: uppercase; opacity: 0.78; }
+.brand__name { font: 700 1.45rem/1 var(--font-display); letter-spacing: 0.01em; }
 
 .nav { display: flex; flex: 1; gap: 2px; min-width: 0; }
 .nav a {
@@ -218,7 +215,7 @@ p { margin: 0 0 0.8em; }
 @media (max-width: 760px) {
   .cover { flex-wrap: wrap; row-gap: 0; padding-top: 10px; }
   .brand { flex: 1; }
-  .brand__name { font-size: 1.35rem; }
+  .brand__name { font-size: 1.3rem; }
   .nav { order: 3; flex-basis: 100%; justify-content: space-between; gap: 0; }
   .nav a { padding: 12px 4px 10px; font-size: 0.78rem; letter-spacing: 0.08em; }
   :root { --ribbon-length: 40px; }
@@ -398,7 +395,7 @@ fieldset .check { margin-top: 6px; }
 /* ----------------------------------------------------- the printed date */
 
 /* How a diary prints the day at the head of its page: the day of the year
- * and the days left, the numeral, the weekday in both scripts, the month.
+ * and the days left, the numeral, the weekday, the month.
  * The people to remember are written in below, in pen. */
 .day { position: relative; }
 .day__count {
@@ -418,7 +415,6 @@ fieldset .check { margin-top: 6px; }
 }
 .day__weekday { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 14px 0 0; }
 .day__en { font: 600 0.95rem/1 var(--font-ui); letter-spacing: 0.28em; text-transform: uppercase; }
-.day__ml { font: 400 1.05rem/1 var(--font-ml); color: var(--ink-soft); }
 .day__month { margin: 8px 0 0; font: 400 1.3rem/1.2 var(--font-display); color: var(--ink-soft); }
 .day--sunday .day__num,
 .day--sunday .day__en { color: var(--ribbon); }
@@ -468,7 +464,6 @@ fieldset .check { margin-top: 6px; }
 .day--small .day__num { margin: 0; font-size: 2.1rem; line-height: 1; letter-spacing: -0.02em; animation: none; }
 .day--small .day__weekday { margin: 3px 0 0; gap: 0; }
 .day--small .day__en { font-size: 0.64rem; letter-spacing: 0.14em; }
-.day--small .day__ml { display: none; }
 .day--small .day__people { font-size: 1.05rem; margin: 8px 0 0; padding-top: 6px; border-top: 1px dashed var(--rule-strong); text-align: left; }
 .day--small .day__blank { display: none; }
 

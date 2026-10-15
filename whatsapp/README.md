@@ -13,9 +13,7 @@ app ── whatsapp network, Bearer token ──► whatsapp.:3000 (this)
 ```
 
 Node, [Baileys](https://github.com/WhiskeySockets/Baileys) and pino — nothing
-else. Adapted from the bridge AnalytixKraft runs for its bug tracker (itself
-lifted from [AnalytixKraft/medha](https://github.com/AnalytixKraft/medha)),
-keeping the text path only, and adding messages to people's numbers.
+else. Text only: into groups, and to people's numbers.
 
 > **Use a spare number.** Driving an account from an unofficial client is
 > against WhatsApp's Terms of Service and can get the number banned, with no

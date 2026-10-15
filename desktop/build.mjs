@@ -109,7 +109,10 @@ function payload() {
   for (const name of ["package.json", "package-lock.json", "src", "public"]) copy(`app/${name}`);
   for (const name of ["package.json", "package-lock.json", "src"]) copy(`whatsapp/${name}`);
   for (const name of ["package.json", "launcher.mjs", "lib", "public"]) copy(`desktop/${name}`);
+  // Apache 2.0, section 4: whoever gets the app gets its licence and its
+  // NOTICE, which credits AnalytixKraft.
   copy("LICENSE");
+  copy("NOTICE");
   say("installing the app's and the bridge's packages");
   const npm = (dir, extra = []) =>
     run("npm", ["ci", "--omit=dev", "--ignore-scripts", "--no-audit", "--no-fund", "--loglevel=error", ...extra], { cwd: join(out, dir) });
@@ -158,7 +161,7 @@ function infoPlist() {
     LSApplicationCategoryType: "public.app-category.productivity",
     // Node 24's own minimum.
     LSMinimumSystemVersion: "13.5",
-    NSHumanReadableCopyright: "Ormma · AnalytixKraft · MIT License",
+    NSHumanReadableCopyright: "© 2026 AnalytixKraft · Apache License 2.0",
   };
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -256,7 +259,7 @@ async function buildWindows(files) {
             "--product-version", VERSION,
             "--file-version", VERSION,
             "--file-description", "Ormma",
-            "--copyright", "AnalytixKraft · MIT License",
+            "--copyright", "© 2026 AnalytixKraft · Apache License 2.0",
             "--original-filename", "Ormma.exe",
           ],
           { cwd: src },
@@ -268,8 +271,10 @@ async function buildWindows(files) {
   });
 
   cpSync(files, root, { recursive: true });
-  rmSync(join(root, "LICENSE"));
-  writeFileSync(join(root, "LICENSE.txt"), readFileSync(join(REPO, "LICENSE"), "utf8").replace(/\r?\n/g, "\r\n"));
+  for (const name of ["LICENSE", "NOTICE"]) {
+    rmSync(join(root, name));
+    writeFileSync(join(root, `${name}.txt`), readFileSync(join(REPO, name), "utf8").replace(/\r?\n/g, "\r\n"));
+  }
   cpSync(join(HERE, "icons", "ormma.ico"), join(root, "ormma.ico"));
 
   const longest = walk(root).reduce((a, b) => (relative(root, b).length > relative(root, a).length ? b : a));

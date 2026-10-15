@@ -1,7 +1,7 @@
 {
   "name": "Ormma",
   "short_name": "Ormma",
-  "description": "ഓർമ്മ — your diary and reminders",
+  "description": "Your diary and reminders",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b2a20",

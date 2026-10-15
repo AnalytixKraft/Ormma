@@ -38,7 +38,7 @@ VIAddVersionKey "CompanyName" "AnalytixKraft"
 VIAddVersionKey "FileDescription" "Ormma setup"
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "ProductVersion" "${VERSION}"
-VIAddVersionKey "LegalCopyright" "MIT License"
+VIAddVersionKey "LegalCopyright" "© 2026 AnalytixKraft · Apache License 2.0"
 
 !define MUI_ICON "${ICON}"
 !define MUI_UNICON "${ICON}"
@@ -68,6 +68,7 @@ VIAddVersionKey "LegalCopyright" "MIT License"
   Delete "$INSTDIR\Ormma.exe"
   Delete "$INSTDIR\ormma.ico"
   Delete "$INSTDIR\LICENSE.txt"
+  Delete "$INSTDIR\NOTICE.txt"
 !macroend
 
 Section "Ormma"

@@ -2,7 +2,7 @@
 
 <h1 align="center">Ormma</h1>
 
-<p align="center"><em>ഓർമ്മ — Malayalam for memory.</em> Your diary and reminders, with WhatsApp as the way in and out.</p>
+<p align="center">Your diary and reminders, with WhatsApp as the way in and out.</p>
 
 <p align="center">
   <a href="https://github.com/AnalytixKraft/Ormma/releases/latest"><b>Download for Mac or Windows</b></a> ·
@@ -78,6 +78,10 @@ Ormma is not made by, or connected with, WhatsApp or Meta.
 
 ## Credits
 
-The WhatsApp bridge is adapted from the one AnalytixKraft runs for its bug tracker, itself lifted from [AnalytixKraft/medha](https://github.com/AnalytixKraft/medha). It is built on [Baileys](https://github.com/WhiskeySockets/Baileys) (MIT). QR codes by [uqr](https://github.com/unjs/uqr) (MIT). The desktop app bundles [Node.js](https://nodejs.org) (MIT); its Windows installer is made with [NSIS](https://nsis.sourceforge.io).
+Ormma is made by [AnalytixKraft](https://github.com/AnalytixKraft). The WhatsApp bridge is built on [Baileys](https://github.com/WhiskeySockets/Baileys) (MIT). QR codes by [uqr](https://github.com/unjs/uqr) (MIT). The desktop app bundles [Node.js](https://nodejs.org) (MIT); its Windows installer is made with [NSIS](https://nsis.sourceforge.io).
 
-MIT licensed — see [LICENSE](LICENSE).
+## Licence
+
+Ormma is licensed under the [Apache License 2.0](LICENSE). You may use it, change it and share it, for any purpose. When you share it — or anything made from it — keep the [LICENSE](LICENSE) and [NOTICE](NOTICE) files with it, mark the files you changed, and keep the credit to AnalytixKraft that NOTICE carries.
+
+The WhatsApp bridge relies, through Baileys, on [libsignal](https://github.com/WhiskeySockets/libsignal-node), which is GPL-3.0: whoever shares the bridge together with it shares that whole under the GPL-3.0's terms as well.
