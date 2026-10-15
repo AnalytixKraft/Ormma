@@ -87,3 +87,7 @@ Ormma is free software, licensed under the [GNU Affero General Public License v3
 As an additional term of that licence (section 7(b)), whoever shares Ormma or a work based on it must keep its credit, “Ormma by AnalytixKraft”: in the [NOTICE](NOTICE) file, and in the notice at the foot of every page. It comes with no warranty.
 
 The WhatsApp bridge relies, through Baileys, on [libsignal](https://github.com/WhiskeySockets/libsignal-node), which is GPL-3.0 — a licence the AGPL-3.0 lets it be combined with.
+
+---
+
+<p align="center"><sub><a href="https://github.com/AnalytixKraft/Ormma">Ormma</a> by <a href="https://github.com/AnalytixKraft">AnalytixKraft</a> · © 2026 · free software under the <a href="LICENSE">GNU AGPL-3.0</a>, with no warranty</sub></p>
