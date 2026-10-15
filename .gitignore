@@ -8,3 +8,7 @@ backups/
 
 node_modules/
 .DS_Store
+
+# The desktop build (desktop/build.mjs): what it makes, and the Node it downloads.
+dist/
+desktop/.cache/

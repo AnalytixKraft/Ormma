@@ -14,6 +14,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { MAX_TITLE, shiftDay } from "./calendar.mjs";
 import { MONTHS, WEEKDAYS, isoDate, parseTime, weekdayOf, zonedNow } from "./dates.mjs";
+import { desktopHints } from "./desktop.mjs";
 
 export const MODEL = "claude-haiku-5-5";
 
@@ -136,7 +137,7 @@ export function createClaudeReader({
       const retry = status === undefined || status >= 500 || [408, 409, 429].includes(status);
       const why =
         err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError
-          ? "the API key was refused — check ANTHROPIC_API_KEY in .env"
+          ? `the API key was refused — check ANTHROPIC_API_KEY in ${desktopHints()?.config ?? ".env"}`
           : `the API ${retry ? "did not answer" : "refused the request"}: ${err?.error?.error?.message || err?.message || err}`;
       noted(false, why);
       throw new ClaudeFailed(why, { retry, refused: !retry });

@@ -1,0 +1,37 @@
+# On every pull request, and on main: the tests, and the desktop app built
+# and tried on a Mac and on Windows.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # The bridge first: the app's tests try its client against the real
+      # bridge (app/test/bridge.test.mjs), which needs the bridge's packages.
+      - name: WhatsApp bridge
+        working-directory: whatsapp
+        run: npm ci && npm test
+      - name: App
+        working-directory: app
+        run: npm ci && npm test
+      - name: Desktop launcher
+        working-directory: desktop
+        run: npm test
+
+  desktop:
+    name: Desktop
+    uses: ./.github/workflows/desktop.yml

@@ -22,8 +22,9 @@ anything else that takes them takes them off the calendar. Linking a phone (`POS
 nothing, but is only for a bridge that is `idle`, and only when a person asks.
 
 Code that sends is tested against fakes that reach no one: the fake bridges in
-`app/test/`, or a stub server with the app run outside Docker and `BRIDGE_URL`
-pointing at it — never the `whatsapp` container. If checking a change seems to
+`app/test/`, the demo's stub bridge (`node scripts/demo/run.mjs`), or a stub
+server with the app run outside Docker and `BRIDGE_URL` pointing at it — never
+the `whatsapp` container. If checking a change seems to
 need a real message, stop and ask a person to send it: say what to click and
 what to look for.
 
@@ -46,4 +47,11 @@ anyone's messages.
 - `whatsapp/` — the bridge, the one piece that acts as a WhatsApp account.
   Read [`whatsapp/README.md`](whatsapp/README.md) before changing it: anything
   that widens what it can do widens what a ban or a leaked token can cost.
-- [`README.md`](README.md) — running it; `scripts/` — setup, backup, restore.
+- `desktop/` — the Mac and Windows app: the launcher (`desktop/launcher.mjs`),
+  the native front door (`desktop/shim/`), and the build (`node
+  desktop/build.mjs`). Tests: `cd desktop && npm test`. Try a build only on its
+  own data folder and ports (`ORMMA_HOME`, `ORMMA_LOGS`, `ORMMA_LABEL`, and
+  `APP_PORT`/`BRIDGE_PORT` in its `ormma.env`) — never on the live instance's.
+- [`README.md`](README.md) and [`docs/`](docs/) — installing, the user guide,
+  working on it; `scripts/` — setup, backup, restore; `scripts/demo/` — the
+  demo (made-up data, a stub bridge) and the screenshots.

@@ -4,8 +4,9 @@
 import { MAX_PASSWORD, MIN_PASSWORD } from "../auth.mjs";
 import { REMINDERS } from "../calendar.mjs";
 import { DEFAULT_ANNIVERSARY_TEMPLATE, DEFAULT_TEMPLATE, MAX_TEMPLATE } from "../messages.mjs";
+import { desktopHints } from "../desktop.mjs";
 import { html, raw, selectOptions } from "./html.mjs";
-import { iconOf, layout, phoneOf } from "./layout.mjs";
+import { iconOf, layout, phoneOf, stepHtml } from "./layout.mjs";
 import { placeholderHelp, sendToOptions } from "./people.mjs";
 
 /* The linked phone: its state, Link or Unlink, and the QR code while
@@ -66,13 +67,15 @@ function capturePicks({ captureChats, captureEvery }, groups, claudeModel, claud
   const every = new Set(captureEvery);
   const known = new Set(groups.map((g) => g.id));
   const checked = (yes) => (yes ? raw(" checked") : "");
+  const desktop = desktopHints();
+  const keyFile = desktop ? desktop.config : ".env";
   const row = (value, label, note = "") => html`<div class="chat-pick">
     <label class="check"><input type="checkbox" name="captureChat" value="${value}"${checked(on.has(value) || every.has(value))}> <span>${label}${note ? html` <span class="optional">${note}</span>` : ""}</span></label>
     ${value === "self"
       ? ""
       : claudeModel
         ? html`<label class="check chat-pick__every"><input type="checkbox" name="captureEvery" value="${value}"${checked(every.has(value))}> <span>every message, no 📅</span></label>`
-        : html`<label class="check chat-pick__every is-off" title="Needs ANTHROPIC_API_KEY in .env"><input type="checkbox" disabled${checked(every.has(value))}> <span>every message, no 📅</span></label>${every.has(value) ? html`<input type="hidden" name="captureEvery" value="${value}">` : ""}`}
+        : html`<label class="check chat-pick__every is-off" title="Needs ANTHROPIC_API_KEY in ${keyFile}"><input type="checkbox" disabled${checked(every.has(value))}> <span>every message, no 📅</span></label>${every.has(value) ? html`<input type="hidden" name="captureEvery" value="${value}">` : ""}`}
   </div>`;
   return html`<fieldset class="field chat-picks">
   <legend class="field__label">Where 📅 messages count</legend>
@@ -84,7 +87,9 @@ function capturePicks({ captureChats, captureEvery }, groups, claudeModel, claud
   <span class="hint">In a group you tick, <strong>anyone in it</strong> can add to the calendar — at most 30 messages an hour. Groups you don’t tick are not read at all.${groups.length ? "" : " Link WhatsApp to list your groups here."}</span>
   <p class="hint claude-note">${claudeModel
     ? html`<strong>Claude reads them</strong> (${claudeModel}): each message, and the one it replies to, go to Anthropic to be read — so <code>📅 dinner at Ravi’s next Friday after 8</code> works too. In a group with <em>every message, no 📅</em> ticked, Claude adds what is an event or a task and lets the rest go.`
-    : html`Simple rules read them. With <code>ANTHROPIC_API_KEY</code> in the .env file, Claude reads them — free-form wording too — and a group can have <em>every message</em> count, no 📅 needed.`}</p>
+    : desktop
+      ? html`Simple rules read them. With <code>ANTHROPIC_API_KEY</code> in Ormma’s settings file, <code>${desktop.config}</code> — and Ormma restarted — Claude reads them, free-form wording too, and a group can have <em>every message</em> count, no 📅 needed.`
+      : html`Simple rules read them. With <code>ANTHROPIC_API_KEY</code> in the .env file, Claude reads them — free-form wording too — and a group can have <em>every message</em> count, no 📅 needed.`}</p>
   ${claudeStatus?.ok === false
     ? html`<p class="notice">Claude’s last call did not work, so simple rules read 📅 messages for now: ${claudeStatus.error.slice(0, 400)}</p>`
     : ""}
@@ -96,6 +101,7 @@ function capturePicks({ captureChats, captureEvery }, groups, claudeModel, claud
 export function settingsPage({ values, errors = {}, timeZones, groups, wa, claudeModel = null, claudeStatus = null, assets, flash }) {
   const invalid = (e) => (e ? raw(' aria-invalid="true"') : "");
   const error = (e) => (e ? html`<span class="field__error">${e}</span>` : "");
+  const desktop = desktopHints();
   return layout({
     title: "Settings",
     active: "settings",
@@ -236,7 +242,9 @@ ${whatsappSection(wa)}
       </label>
     </div>
     <div class="form__actions"><button type="submit" class="button">Change password</button></div>
-    <p class="hint">Changing it signs out every other browser. Forgot it? On the computer that runs the app, run <code>bash scripts/reset-password.sh</code> — then sign in with ADMIN_PASSWORD from its .env file.</p>
+    ${desktop
+      ? html`<p class="hint">Changing it signs out every other browser. Forgot it? On this computer, ${stepHtml(desktop.reset)} — then open Ormma, and it asks you to choose a new one.</p>`
+      : html`<p class="hint">Changing it signs out every other browser. Forgot it? On the computer that runs the app, run <code>bash scripts/reset-password.sh</code> — then sign in with ADMIN_PASSWORD from its .env file.</p>`}
   </form>
 </section>`,
   });

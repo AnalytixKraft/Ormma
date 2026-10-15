@@ -1,0 +1,59 @@
+# A release. Set the version in desktop/package.json, add it to
+# CHANGELOG.md, merge, then push a tag for it:
+#
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# This builds and tries the Mac and Windows downloads, and makes a DRAFT
+# release with them and their SHA-256 sums. A person reads it over and
+# presses Publish (docs/building.md).
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Desktop
+    uses: ./.github/workflows/desktop.yml
+
+  draft:
+    name: Draft release
+    needs: desktop
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: The tag is the version
+        run: |
+          version=$(node -p 'require("./desktop/package.json").version')
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "the tag is $GITHUB_REF_NAME, desktop/package.json says $version"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Draft it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist && sha256sum Ormma-* > "SHA256SUMS-$VERSION.txt" && cd ..
+          # This version's part of CHANGELOG.md, without its heading.
+          awk -v v="$VERSION" '$0 ~ "^## " v { on = 1; next } /^## / { on = 0 } on' CHANGELOG.md > notes.md
+          cat >> notes.md <<NOTES
+
+          ## Installing
+
+          - **Mac** (Apple silicon or Intel, macOS 13.5+): \`Ormma-$VERSION-mac.dmg\` — open it and drag Ormma to Applications.
+          - **Windows** (10 or 11, 64-bit): \`Ormma-$VERSION-windows-setup.exe\`.
+
+          The downloads are not yet signed, so the first time, macOS or Windows asks before opening them: [the install guide](https://github.com/AnalytixKraft/Ormma/blob/main/docs/install.md#the-desktop-app) shows what to click. \`SHA256SUMS-$VERSION.txt\` has each file's SHA-256 sum, to check a download against.
+
+          Updating: install the new version over the old one and open it — your data, password and WhatsApp link stay.
+          NOTES
+          gh release create "$GITHUB_REF_NAME" --draft --title "Ormma $VERSION" --notes-file notes.md dist/*

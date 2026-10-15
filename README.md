@@ -1,333 +1,83 @@
-# Ormma
+<p align="center"><img src="app/public/icon-512.png" width="96" height="96" alt=""></p>
 
-*ഓർമ്മ — Malayalam for memory.* Your diary and reminders, with WhatsApp as the way in and out.
+<h1 align="center">Ormma</h1>
 
-- **A diary** — notes, and a journal page for each day, with #tags and search: [Notes and the journal](#notes-and-the-journal).
-- **A calendar, and reminders that keep coming until done** — events and tasks, added on the page or from WhatsApp: send `📅 Dentist Tue 10am` or `remind me to call Renjith`. Each morning “Your day” lists what the day holds: [The calendar](#the-calendar).
+<p align="center"><em>ഓർമ്മ — Malayalam for memory.</em> Your diary and reminders, with WhatsApp as the way in and out.</p>
+
+<p align="center">
+  <a href="https://github.com/AnalytixKraft/Ormma/releases/latest"><b>Download for Mac or Windows</b></a> ·
+  <a href="docs/install.md">Install guide</a> ·
+  <a href="docs/guide.md">User guide</a> ·
+  <a href="docs/building.md">Working on it</a>
+</p>
+
+![Ormma's Today page: the day printed as a diary prints it, the people to remember, your events and to-dos, the day's WhatsApp messages and where each stands, today's journal page, and who comes next](docs/screenshots/today.png)
+
+- **A diary** — notes, and a journal page for each day, with #tags and search. Send `📝 Coffee with Tom` on WhatsApp and it is written on today's page.
+- **A calendar, and reminders that keep coming until done** — events and tasks, added on the page or from WhatsApp: send `📅 Dentist Tue 10am` or `remind me to call Renjith`. Each morning “Your day” lists what the day holds.
 - **The people to remember** — 🎂 birthdays and 💍 anniversaries, each wished on WhatsApp at its time, in a group or straight to their own number, with a morning reminder to you of every wish the day holds, and an alert when one was not sent.
 
-It runs on a computer that stays on — a Mac, directly, with nothing but Node; or any computer with Docker — and you use it in the browser at `http://localhost:3210`.
+Ormma runs on your own computer — your list, your calendar and your notes stay there — and you use it in the browser.
+
+## Download
+
+| | |
+|---|---|
+| **Mac** — Apple silicon or Intel, macOS 13.5 or newer | [`Ormma-<version>-mac.dmg`](https://github.com/AnalytixKraft/Ormma/releases/latest) |
+| **Windows** — 10 or 11, 64-bit | [`Ormma-<version>-windows-setup.exe`](https://github.com/AnalytixKraft/Ormma/releases/latest) |
+
+Install it, open it, choose a password, and link your WhatsApp. The downloads are not yet signed, so the first time, macOS or Windows asks whether to open an app from the internet: [the install guide](docs/install.md#the-desktop-app) shows what to click.
+
+Linux, a home server, or a Mac you develop on: run it [from source](docs/install.md#from-source) — with Node on a Mac, or with Docker anywhere.
+
+## A word about WhatsApp
 
 > [!WARNING]
-> **Link a spare WhatsApp number if you can, not your business one.** The app sends through WhatsApp Web as a *linked device* — an unofficial client, against WhatsApp's Terms of Service. WhatsApp can ban a number that uses one, with no warning, and the ban takes the whole account. A few messages a day is about as low-risk as this gets; it is not zero — and messages straight to people's numbers draw more attention than posts in groups.
+> **Link a spare WhatsApp number if you can, not your business one.** Ormma sends through WhatsApp Web as a *linked device* — an unofficial client, against WhatsApp's Terms of Service. WhatsApp can ban a number that uses one, with no warning, and the ban takes the whole account. A few messages a day is about as low-risk as this gets; it is not zero — and messages straight to people's numbers draw more attention than posts in groups.
+
+Ormma is not made by, or connected with, WhatsApp or Meta.
+
+## A look around
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/screenshots/calendar.png" alt="The calendar: a month of events, birthdays and tasks, with the day open beside it"><br><b>The calendar</b> — events, repeating or not, with reminders on WhatsApp; tasks, ticked off here or on Today.</td>
+    <td width="50%" valign="top"><img src="docs/screenshots/notes.png" alt="Notes: tags, a pinned note, and a note about someone on the list"><br><b>Notes</b> — a notebook with #tags and search, and notes about the people on your list.</td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/screenshots/people.png" alt="The People table: each person's number, where their wish goes, its time and its message"><br><b>People</b> — upload a list from a spreadsheet; choose where each wish goes, when, and what it says.</td>
+    <td width="50%" valign="top"><img src="docs/screenshots/person.png" alt="A person's page, with their wish previewed as a WhatsApp message"><br><b>Each person</b> — their wish as it will look in WhatsApp, and your notes about them.</td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/screenshots/today-dark.png" alt="The Today page at night: the same diary, in dark colours"><br><b>At night</b> — the same diary in dark colours, when your computer is set to dark.</td>
+    <td width="50%" valign="top" align="center"><img src="docs/screenshots/today-phone.png" width="62%" alt="The Today page on a phone"><br><b>On a phone</b> — through a <a href="docs/install.md#reach-it-from-anywhere">tunnel</a> of your own.</td>
+  </tr>
+</table>
+
+## Documentation
+
+- **[Install guide](docs/install.md)** — the Mac and Windows downloads; from source on a Mac or with Docker; keeping it running, updating, backing up, moving and uninstalling.
+- **[User guide](docs/guide.md)** — getting started, people and their wishes, the morning reminder and alerts, the calendar and reminders from WhatsApp, notes and the journal, and what to do when something is not sent.
+- **[The WhatsApp bridge](whatsapp/README.md)** — what it will and will not do, and its API.
+- **[Working on Ormma](docs/building.md)** — the code, the tests, a demo that needs no WhatsApp, the screenshots, and building and releasing the downloads. Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
+- [CHANGELOG.md](CHANGELOG.md) · [SECURITY.md](SECURITY.md) — reporting a vulnerability
 
 ## How it fits together
 
 ```
  you, in a browser ──► app ─────────────► whatsapp (the bridge) ──► WhatsApp
  (localhost:3210)      pages, the list,   a linked device of the
-                       the daily clock,   number; posts into groups
-                       SQLite database    and to people's numbers
+                       the daily clock,   number: posts into groups
+                       SQLite database    and to people's numbers,
+                                          and hands over your 📅 and 📝
 ```
 
-- **`app/`** — the pages, the database (people, settings, what was sent, your notes — one SQLite file) and the clock that sends each day's messages. Node 24, no framework, SQLite built in.
-- **`whatsapp/`** — the bridge: holds the WhatsApp session and does one thing with it — send text to a group it is in, or to a person's number. Only this computer (or, in Docker, only the app) can reach it, and only with the token. It only messages numbers that are on WhatsApp, at most 30 direct messages an hour, and ignores messages from strangers. See [`whatsapp/README.md`](whatsapp/README.md).
-
-Two ways to run the pair: **on a Mac, directly** — two small Node programs that macOS's launchd starts when you sign in and restarts if they stop — or **in Docker**, on any computer (plus an optional Cloudflare tunnel; see [Reach it from anywhere](#reach-it-from-anywhere)).
-
-## Set it up
-
-```bash
-git clone https://github.com/AnalytixKraft/Ormma.git
-```
-
-```bash
-cd Ormma
-```
-
-```bash
-bash scripts/setup.sh
-```
-
-`setup.sh` creates `.env` and fills in the secrets. Run in a terminal, it asks you to choose the app's password (or makes one up; see it with `grep ADMIN_PASSWORD .env`). Then start it, one of two ways.
-
-**On a Mac, without Docker** — needs Node 22.13 or newer (fnm, nvm or Homebrew; the newest one found is used):
-
-```bash
-bash scripts/native/install.sh
-```
-
-That copies this version of the code to `~/Library/Application Support/WishCalendar/release`, installs its Node packages there, and two launchd agents — the app and the WhatsApp bridge — that start when you sign in and start again if they ever stop. They run that copy, so editing this folder or switching git branches changes nothing until you run `install.sh` again (after `git pull`, say). An update stops the old version, starts the new one and checks both answer — a couple of seconds — and if the new one does not come up, it puts the old one back and starts it again, so an update never leaves it down. Data lives in `~/Library/Application Support/WishCalendar`, logs in `~/Library/Logs/WishCalendar`. Both listen on 127.0.0.1 only. `scripts/native/status.sh` says how it is; `scripts/native/uninstall.sh` stops it and keeps the data.
-
-**In Docker** — any computer with [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine:
-
-```bash
-docker compose up -d --build
-```
-
-Moving from Docker to the Mac version? `bash scripts/native/migrate-from-docker.sh` stops the Docker containers and brings the database and the WhatsApp link across — no QR to scan again — then run `install.sh`. Never run the two side by side: two bridges on one WhatsApp link take it from each other.
-
-Open <http://localhost:3210>, sign in, and follow **Getting started** on the Today page:
-
-1. **Link the WhatsApp number.** Settings → WhatsApp → *Link a phone*. On the phone: WhatsApp → Settings → Linked devices → Link a device, and scan the code.
-2. **Upload your list** on *People → Upload a list* — or use *Add birthday* and *Add anniversary*.
-3. **Choose where each wish goes.** On the People page, each row has a *Send wish to* — their own number, or one of the groups the linked number is in — a *Time* and a *Message*. An empty time is the wish time in Settings; an empty message is the default for its occasion. Then *Save changes*.
-4. **Choose where your reminder goes, and turn sending on** in Settings: *This WhatsApp — the linked phone* puts the morning reminder in the linked phone's own chat (Message yourself). *Send wishes and reminders automatically* is the master switch: unticked, nothing goes out on its own (the Send now buttons still work).
-
-To post in a group, the linked number has to be a member; if the group only lets admins send messages, make it an admin.
-
-### Uploading a list
-
-Upload a CSV file, or paste rows copied from Excel or Google Sheets. Only a name and a date are needed; with a header row the columns can be in any order:
-
-```
-Name            Birthday      Anniversary   WhatsApp number   Send to            Message                    Time
-Anu Joseph      30-09-1996                  98765 43210       direct             Happy birthday, Anu! 🎂    09:30
-Joseph & Mary                 15-05-1995                      St. Mary's Youth
-Biju Thomas     5 Oct         12 Jan
-```
-
-- A row can have a **Birthday**, an **Anniversary** (the wedding day), or both — a row with both adds both. A list with a single **Date** column can say which in an **Occasion** column (birthday / anniversary).
-- Dates are read **day first** (30-09-1996, 30/09, 30 Sep, 1996-09-30); the year is optional and lets messages say the age they turn, or the years married.
-- Numbers without a country code get the one in Settings (+91 unless you change it).
-- *Send to* is a group's name, or `direct` for their own number. Left empty, choose it on the People page.
-- A bad number, an unknown group or an odd time does not stop the person being added — that detail is left blank, and the page lists them for you to fill in.
-- On a row with both dates, *Message* is the birthday's; an *Anniversary message* column is the anniversary's.
-- A birthday or anniversary already on the list (same name, occasion and date) is skipped, so a corrected list can be uploaded again.
-
-### Messages
-
-Each row's *Message* is what its wish says. Left empty, it sends the **default message** for its occasion — one for birthdays, one for anniversaries — which you edit in the *Default messages* panel at the top of the People page (or in Settings).
-
-To change the default for one person, click into their empty message box: the default comes in with their name already in it, ready to edit. Left unchanged, the box empties again and keeps following the default. A person's page previews the wish as it will look in WhatsApp. A message can contain:
-
-| | becomes |
-|---|---|
-| `{name}` | their name — or the couple's — as on the list |
-| `{first_name}` | the first word of the name |
-| `{years}` | the age they turn, or the years married — left out when the year is not known (`{age}` works too) |
-| `{ordinal}` | 30th, 25th… — left out when not known (`{ordinal_age}` works too) |
-| `{group}` | the group's name — left out when the wish goes to their number |
-
-WhatsApp formatting works: `*bold*`, `_italic_`. A 29 February birthday or anniversary is wished on 28 February in other years.
-
-### Send now, and previews
-
-- **Send now** (on each row of the People table, and on a person's page) sends that wish straight away. On the day itself it *is* the day's wish — sent now instead of at its time, and not again. On any other day it is an extra message, and the wish on the day still goes out.
-- **Send me a preview** (on a person's page) sends their wish, as they will get it, to your number in Settings — or to the linked phone if you left that empty.
-
-### The morning reminder
-
-At the reminder time (06:00 unless you change it) the app sends you the day's plan — before any wish goes out:
-
-```
-🎉 Today's wishes · Wed 30 Sep
-
-• 08:00 → St. Mary's Youth — 🎂 Biju Thomas
-> Happy birthday, Biju! 🎉
-
-• 08:00 → St. Mary's Youth — 💍 Joseph & Mary (25 years)
-> Happy anniversary, Joseph & Mary! 💍
-
-⚠️ 🎂 Mary K — no “Send to” chosen, so nothing will be sent
-
-• 09:30 → +91 98765 43210 — 🎂 Anu Joseph (turns 30)
-> Happy birthday, Anu! 🎂
-
-Coming up
-• Tomorrow — 🎂 Jose P
-```
-
-It goes to the linked phone, your own number, or a group (Settings → *Send my daily reminder to*); on a day with nothing to say, it is not sent.
-
-### Alerts
-
-When a wish is not sent, the app tells you on WhatsApp — on the linked phone, in its own chat, unless you choose otherwise (Settings → *Alerts*; *No one* turns them off):
-
-- **at once**, when WhatsApp refuses a wish for a reason someone has to fix: the linked number is not in the group, only admins may post there, or the number is not on WhatsApp;
-- **after the last try**, when it refuses for any other reason (it is tried 6 times, 10 minutes apart);
-- **the next morning**, at the reminder time, for the wishes of a day that ended before they could go — the computer was off or asleep, or WhatsApp was not connected, until midnight.
-
-```
-⚠️ Ormma: a wish was not sent
-
-🎂 Biju Thomas → St. Mary's Youth · 08:00
-The linked WhatsApp number is not a member of this group. Add it to the group, then retry.
-It is tried again every 10 minutes, 5 more times.
-
-To send it now: Ormma → Today → Retry now.
-```
-
-An alert is a WhatsApp message like the others: while WhatsApp is not connected it waits, and it goes out once it can (within 3 days). It is sent *from* the linked number — so if that is your own number, WhatsApp does not notify you of it (to WhatsApp it is a message you sent); it waits in *Message yourself*. With a spare number linked, alerts to your own number (*My number*) notify you like any message. **Send a test alert** in Settings shows you one.
-
-What no alert can say is that the computer, or WhatsApp, is down *right now*: nothing can be sent then. The Today page says so (*Messages are waiting*), and the next morning's alert lists what was missed.
-
-### The password
-
-The first password is `ADMIN_PASSWORD` in `.env` (`setup.sh` asked for it, or made one up: `grep ADMIN_PASSWORD .env`). Change it in **Settings → Password** — that needs the current one, and signs out every other browser. The new one is kept as a salted scrypt hash in the app's database, never as the password itself.
-
-Forgot it? The sign-in page offers no reset — anyone who can reach the page could use one. On the computer that runs the app:
-
-```bash
-bash scripts/reset-password.sh
-```
-
-That removes the password set in Settings, so `ADMIN_PASSWORD` from `.env` works again.
-
-## The calendar
-
-**Calendar** holds your events and tasks, beside the birthdays and anniversaries.
-
-- **An event** has a day and a time — or none, for all day — and can last several days (*Until*). It can repeat every day, week, month or year, until a day or for good; monthly on the 31st falls on the last day of a shorter month.
-- **A reminder**, if you give an event one, comes on WhatsApp at its time: when it starts, or from 10 minutes to a week before. An all-day event's comes at the reminder time, the day or days before.
-- **A task** has a title and, if you like, a day it is due. Tick it off on the calendar or on Today; overdue ones show in red.
-- **Your day**: each morning at the reminder time, a message lists the day's events, the tasks due and overdue, and tomorrow's events — on days that have any.
-
-```
-🗓️ Your day · Thu 8 Oct
-
-• All day Trip to Munnar (day 2 of 4)
-• 10:00–10:45 Dentist
-• 18:30 Choir practice
-
-To do
-• Call the plumber — overdue since Tue 6 Oct
-• Pay the electricity bill
-
-Tomorrow
-• 13:00 Team lunch
-```
-
-Calendar messages go to the linked phone (*Message yourself*) unless you change it in **Settings → Calendar**; *Nowhere* turns them off. They are yours, so they never go with the wishes' morning reminder. Like every message, they wait while sending is paused, and an alert tells you when one is refused.
-
-### Add to the calendar from WhatsApp
-
-Start a WhatsApp message with 📅 (or 📆), in a chat ticked in **Settings → Calendar → Where 📅 messages count**, and it goes on the calendar:
-
-| You send | It adds |
-|---|---|
-| `📅 Dentist Tue 10am` | an event, the coming Tuesday at 10:00 |
-| `📅 Choir Sat 6-8pm` | an event, Saturday 18:00–20:00 |
-| `📅 Trip to Munnar 10-13 Oct` | an event over four days, all day |
-| `📅 Call Mum 6:30pm` | an event that day — or the next, if 18:30 has passed |
-| `📅 task Pay rent by Fri` | a task, due Friday |
-| `📅 Buy batteries` | a task, no day (there is no day or time in it) |
-
-To add what someone else wrote — “Choir moves to Sat 6pm” — **reply to it with just 📅**. Your own words in the reply become the title (`📅 choir`), and a day or time in it wins over theirs.
-
-**Added the wrong thing?** Reply `delete` to the app's “✅ Added to the calendar …” message (or `remove`, `cancel`, ❌, 🗑️) and it comes off the calendar again: “🗑️ Deleted: *Doc* — Wed 14 Oct, 22:00”. In a group where every message counts, `delete` alone does it; elsewhere, `📅 delete`. Anything else said in reply to it adds nothing — other changes are made in **Calendar**.
-
-**Reminders.** `remind me to call Renjith` sets a reminder for the next morning at 7 (*Settings → Calendar → A reminder without a time goes at*; that same morning, if it is not 7 yet). Say when, and it starts then: `remind me at 5pm to pay the bill`, `remind me on Friday to renew the insurance`. A reminder keeps coming until it is done: at its time on its day and **the two days after**, then **every other day for ten days** — eight times in thirteen days — and then it goes off the calendar on its own. Each reminder counts from its own first day, so five set on five days run five ways. Each says which it is and when the next comes: “⏰ *Call Renjith* — Today, 07:00 · reminder 3 of 8. Reply “done” when it is — else again Fri 2 Oct.” **Reply `done`** (or `delete`) to any of them, and it stops: “✅ Done: *Call Renjith* — no more reminders.”
-
-**Delete all.** `delete all calendar for this week` — or `today`, `tomorrow`, `next week`, `this month`, `next month`, or just `delete all` — is asked about first: “⚠️ Delete 5 events and 2 tasks — this week (Sun 11 Oct – Sat 17 Oct)? Reply *yes* to this message within 10 minutes.” Only a **yes in reply to that message** deletes them; anything else, or nothing for 10 minutes, deletes nothing. `tasks` or `events` in it narrows it to those. Birthdays, anniversaries and notes are never touched, and a repeating event is kept when a week or a month is cleared (its weeks are all one event — delete it in Calendar). Only in *Message yourself* and in a group where every message counts. Before deleting, the app keeps a copy of the database next to it (`before-delete-….db` in `~/Library/Application Support/WishCalendar/app`, the latest 10): `bash scripts/restore.sh "<that file>"` puts the database back as it was then — anything changed since is undone with it.
-
-It reads days the way you would say them — *today*, *tonight*, *tomorrow*, *Tue*, *next Fri*, *15 Oct*, *Oct 15*, *15/10* (day first), *2026-10-15*, *10-13 Oct* — and times like *10am*, *6.30pm*, *18:30*, *6-8pm*, *noon*. A day already gone this year means next year's. A new event gets a reminder **5 minutes before** (Settings → Calendar → *Remind me before each new event*). The answer — what was added, and when — goes where calendar messages go: check it, and change anything in **Calendar**.
-
-**Where it counts** is yours to tick: *Message yourself* (the linked number's own chat, ticked unless you change it), and any of the linked number's groups. In a group you tick, **anyone in it** can add to the calendar — a family's or a team's shared calendar — at most 30 messages an hour, each with its sender's name. Groups you don't tick are not read at all: their messages are dropped before they are even decrypted (but for a quarter of an hour after a wish goes into one, so its members' phones can ask for it again — even then, none is read).
-
-**With Claude.** Put an Anthropic API key in `.env` — `ANTHROPIC_API_KEY=sk-ant-…`, and `ANTHROPIC_WORKSPACE_ID=…` too if the API says the key belongs to no one workspace — and run `install.sh` again. Then Claude Haiku 5.5 reads each 📅 message, free-form wording too (`📅 dinner at Ravi's next Friday after 8`), and a ticked group can have **every message, no 📅** count: Claude adds what is an event or a task and lets the rest go quietly — for a group kept for the calendar, say you and a second phone. What goes to Anthropic is the message, the message it replies to, and when it was sent — no names, numbers or group. A fraction of a cent a message. When Claude cannot be reached, simple rules read 📅 messages, and messages without one wait for it, up to six hours; Settings → Calendar says when its last call failed, and why.
-
-The app's messages come *from* the linked number. If that is your own number, WhatsApp does not notify you of them — to WhatsApp they are messages you sent. Link a spare number, and the answers, “Your day” and the reminders reach you like any message: in a group you are in, or straight to your number (*My number*).
-
-## Notes and the journal
-
-**Notes** is your notebook.
-
-- **A note** is anything you write down: a list, an idea, something to remember. Without a title, its first line is its title. Pin the ones you want on top.
-- **#tags**: write `#gifts` or `#health` anywhere in a note and the tag shows above your notes; click it for every note and journal page that has it. A tag starts with a letter, in any language.
-- **About someone**: a note can be about someone on your list — gift ideas, what they are up to. It shows on their page under *Notes about …*, and stays when they leave the list.
-- **The journal** has a page for every day. Today's is on the Today page; *Notes → Journal* goes back and forth a day at a time, with that day's birthdays on its leaf. A page saved empty is gone.
-- **Search** finds notes and journal pages that have every word you type, as the start of a word: `dent tues` finds “Dentist on Tuesday”. Accents do not matter.
-- `*bold*`, `_italic_` and links work, as in WhatsApp. ⌘ (or Ctrl) + Enter saves, and leaving a page with writing not yet saved asks first.
-
-**Notes from your phone.** Start a WhatsApp message with 📝, in a chat ticked under *Settings → Calendar → Where 📅 messages count*, and it is written on that day's journal page — the time it was sent, then your words — under whatever is there already: `📝 Coffee with Tom, he's doing well`. `Notes:`, `Note:` or `Journal:` at the start does the same, if an emoji is a bother to type: `Notes: Coffee with Tom`. Send as many as you like through the day; they land on the one page, in order, so the day's notes are together by the end of it. Reply 📝 to someone's message to keep it (quoted) on the page. In a group where every message counts, `note:` or `diary:` at the start does the same, and Claude writes down what reads like a diary entry even without one — what happened, a thought — and lets chat go. The answer — “📓 Noted on today's page (14:32)” — comes where calendar messages go; reply `delete` to it and the line comes off the page again.
-
-**Reading them back.** `show notes for yesterday` — or `today`, `last week`, `this month`, `Monday`, `5 Oct`; `what did I write on Tuesday`; `last week's journal` — and the page, or the pages, come back the same way, oldest first, each under its day. In *Message yourself* start it with 📝 or `Notes:` (`📝 show notes for today`); in a group where every message counts the words alone do. Only there: a group others share never gets your pages. A long answer is shortened — the whole page is in the app.
-
-Nothing written in the app is sent anywhere. It is in the same database file as the list, so `scripts/backup.sh` keeps it too — keep those backups as private as the notes themselves.
-
-## Keep it running
-
-- **On a Mac, directly**: launchd starts both parts when you sign in and restarts them if they stop — nothing to set.
-- **In Docker**: the containers restart on their own (`restart: unless-stopped`) — as long as Docker itself starts. In Docker Desktop: **Settings → General → Start Docker Desktop when you sign in**.
-- A sleeping Mac runs nothing. Stop it sleeping: **System Settings → Battery (or Energy) → Prevent automatic sleeping when the display is off**, on power adapter — and on a MacBook, keep the lid open.
-- If the computer is off or asleep at a message's time, it goes out as soon as the computer is back — later that day, never twice, and never on a later day. A wish whose day ended first is named in the next morning's [alert](#alerts).
-- **Open WhatsApp on the linked phone at least every two weeks.** WhatsApp unlinks devices whose phone has been offline for about 14 days; Settings → WhatsApp then asks you to link it again.
-
-## Reach it from anywhere
-
-The app listens on `127.0.0.1` only. To use it from your phone or share it with a co-organiser, put it behind a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) on a hostname of yours:
-
-1. In the Cloudflare dashboard: **Zero Trust → Networks → Tunnels → Create a tunnel** (type *Cloudflared*). Copy its token.
-2. Add a **public hostname** to the tunnel — say `birthdays.example.com` — with service **`http://app:3210`**.
-3. Put the token in `.env` as `CLOUDFLARE_TUNNEL_TOKEN=…`, then:
-
-```bash
-docker compose --profile tunnel up -d
-```
-
-Without a token, `cloudflared` cannot start. The tunnel reaches the app's pages only, never the bridge. (Running on the Mac without Docker, run `cloudflared` itself and point the hostname at `http://localhost:3210`.) The pages need the password, and failed sign-ins are throttled; for more — and with your notes in the app, you want more — put a Cloudflare Access policy in front of the hostname.
-
-## Day to day
-
-On a Mac, without Docker:
-
-```bash
-bash scripts/native/status.sh                  # running? WhatsApp connected?
-```
-
-```bash
-tail -n 50 ~/Library/Logs/WishCalendar/app.log # what was sent, and what failed
-```
-
-In Docker:
-
-```bash
-docker compose ps                   # both should say (healthy)
-```
-
-```bash
-docker compose logs --tail 50 app   # what was sent, and what failed
-```
-
-Either way — the scripts find where it runs:
-
-```bash
-bash scripts/backup.sh              # the database, into backups/
-```
-
-```bash
-bash scripts/restore.sh backups/birthdays-2026-09-30-120000.db
-```
-
-A backup holds people, settings and the record of what was sent. It does not hold the WhatsApp link — after restoring on a new computer, link the phone again.
-
-To update to a newer version: `git pull`, then `bash scripts/native/install.sh` (Mac) or `docker compose up -d --build` (Docker).
-
-### When something is not sent
-
-The Today page lists each of the day's messages and where it stands; a message WhatsApp refused says why, and *Retry now* tries again. The app also retries on its own every 10 minutes, up to 6 times a day, and sends you an [alert](#alerts) for a wish that does not go.
-
-| The page says | Do this |
-|---|---|
-| No “Send to” chosen | People page: choose where their wish goes |
-| WhatsApp is not connected | Settings → WhatsApp: link the phone again (it may have been offline for 2 weeks, or the device was removed on it) |
-| That number is not on WhatsApp | Check the number on the People page — with the country code |
-| Not a member of this group | Add the linked number to the group on WhatsApp, then *Retry now* |
-| Only admins can send messages | Make the linked number a group admin, then *Retry now* |
-| Too many direct messages this hour | Nothing — the rest go out on the next tries |
-| The WhatsApp bridge is not answering | Mac: `bash scripts/native/status.sh`, and its log in `~/Library/Logs/WishCalendar`. Docker: `docker compose ps`, then `docker compose up -d` |
-| The app and the bridge hold different tokens | Mac: `bash scripts/native/install.sh`. Docker: `docker compose up -d` (not `restart`) — so both read `.env` again |
-| WhatsApp refused this number — possibly banned | Link a different number |
-
-## Development
-
-```bash
-cd app && npm ci && npm test
-```
-
-The app is plain Node 24 (`node:http`, `node:sqlite`, `node:test`), with one dependency to draw the QR code. The pages are rendered on the server; `app/public/app.js` only adds confirmations, the list filter, reading an uploaded file, the live wish preview, QR refresh, the notebook's ⌘ + Enter and unsaved-writing warning, and the calendar's month strip on a phone. Each area's handlers are in `app/src/routes/`, its pages in `app/src/views/`.
-
-The pages are drawn as a bound diary — the green cover with the gold stamp, the ribbon that marks the open section, the day printed as a diary prints it — in `app/public/style.css`, with no web fonts: Superclarendon, Charter, Gill Sans and Malayalam MN ship with macOS and iOS, and elsewhere the stacks fall back. The icon, `app/public/favicon.svg`, is the Malayalam ഓ as outlines (taken from Malayalam MN with CoreText) on a diary cover; `apple-touch-icon.png` and `icon-512.png` are rendered from it on a Mac with `qlmanage -t -s 1024` and `sips`. Every page but sign-in needs the session cookie, every form post must come from the app's own pages, and the Content-Security-Policy allows no inline script and nothing from other sites.
-
-Test anything that sends against a fake bridge, never a linked one: the tests' fakes in `app/test/`, or the app run outside Docker with `BRIDGE_URL` pointing at a stub:
-
-```bash
-cd app && BRIDGE_URL=http://127.0.0.1:3999 BRIDGE_TOKEN=… ADMIN_PASSWORD=… SESSION_SECRET=… DATA_DIR=./data PORT=3211 npm start
-```
+- **`app/`** — the pages, the database (people, settings, what was sent, your calendar and notes — one SQLite file) and the clock that sends each day's messages. Node 24, no framework, SQLite built in.
+- **`whatsapp/`** — the bridge: holds the WhatsApp session, sends text to a group it is in or to a person's number, and hands the app the 📅 and 📝 messages from the chats you tick. Only this computer (or, in Docker, only the app) can reach it, and only with the token. It only messages numbers that are on WhatsApp, at most 30 direct messages an hour, and ignores messages from strangers. See [`whatsapp/README.md`](whatsapp/README.md).
+- **`desktop/`** — the Mac and Windows app: the two above with their own Node, and a launcher that starts them when you sign in.
 
 ## Credits
 
-The WhatsApp bridge is adapted from the one AnalytixKraft runs for its bug tracker, itself lifted from [AnalytixKraft/medha](https://github.com/AnalytixKraft/medha). It is built on [Baileys](https://github.com/WhiskeySockets/Baileys) (MIT). QR codes by [uqr](https://github.com/unjs/uqr) (MIT).
+The WhatsApp bridge is adapted from the one AnalytixKraft runs for its bug tracker, itself lifted from [AnalytixKraft/medha](https://github.com/AnalytixKraft/medha). It is built on [Baileys](https://github.com/WhiskeySockets/Baileys) (MIT). QR codes by [uqr](https://github.com/unjs/uqr) (MIT). The desktop app bundles [Node.js](https://nodejs.org) (MIT); its Windows installer is made with [NSIS](https://nsis.sourceforge.io).
 
 MIT licensed — see [LICENSE](LICENSE).

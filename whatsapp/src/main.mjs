@@ -2,7 +2,7 @@
  * WhatsApp at all, then serves the API on :3000.
  *
  * Environment (docker-compose.yml, service `whatsapp`; or, without Docker,
- * scripts/native/run.sh):
+ * scripts/native/run.sh, or the desktop app's desktop/lib/service.mjs):
  *   BRIDGE_TOKEN   the shared secret the app sends as `Authorization: Bearer`.
  *                  From WHATSAPP_BRIDGE_TOKEN in .env. Missing or short → the
  *                  bridge runs `unconfigured` (below) rather than failing.
@@ -62,14 +62,25 @@ server.listen(PORT, HOST, () => {
   log.info({ host: HOST, port: PORT, state: session ? session.status().state : "unconfigured" }, "listening");
 });
 
-for (const signal of ["SIGTERM", "SIGINT"]) {
-  process.once(signal, async () => {
-    log.info({ signal }, "stopping");
-    server.close();
-    // Closes the socket and flushes credentials; never a logout — a restart
-    // must come back linked. Docker's 10 s grace period (launchd's: 20 s) is
-    // the upper bound.
-    await session?.stop();
-    process.exit(0);
-  });
+let stopping = false;
+async function stop(signal) {
+  if (stopping) return;
+  stopping = true;
+  log.info({ signal }, "stopping");
+  server.close();
+  // Closes the socket and flushes credentials; never a logout — a restart
+  // must come back linked. Docker's 10 s grace period (launchd's: 20 s) is
+  // the upper bound.
+  await session?.stop();
+  process.exit(0);
+}
+for (const signal of ["SIGTERM", "SIGINT"]) process.once(signal, () => stop(signal));
+
+// Started by the desktop app's launcher (desktop/launcher.mjs), which on
+// Windows has no signal to stop us with: it asks over the IPC channel. When
+// the launcher itself is gone, stop too: the next launcher starts its own
+// bridge, and two on one WhatsApp link take it from each other.
+if (process.send) {
+  process.on("message", (message) => message === "stop" && stop("ipc"));
+  process.once("disconnect", () => stop("launcher gone"));
 }

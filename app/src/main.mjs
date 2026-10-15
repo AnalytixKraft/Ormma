@@ -38,13 +38,21 @@ if (problems.length) {
   capture.start();
 }
 
-for (const signal of ["SIGTERM", "SIGINT"]) {
-  process.once(signal, () => {
-    log.info({ signal }, "stopping");
-    scheduler.stop();
-    capture.stop();
-    server.close();
-    db.close();
-    process.exit(0);
-  });
+function stop(signal) {
+  log.info({ signal }, "stopping");
+  scheduler.stop();
+  capture.stop();
+  server.close();
+  db.close();
+  process.exit(0);
+}
+for (const signal of ["SIGTERM", "SIGINT"]) process.once(signal, () => stop(signal));
+
+// Started by the desktop app's launcher (desktop/launcher.mjs), which on
+// Windows has no signal to stop us with: it asks over the IPC channel. When
+// the launcher itself is gone, so is the reason to run — the next one starts
+// its own copy, and two would each send the day's messages.
+if (process.send) {
+  process.on("message", (message) => message === "stop" && stop("ipc"));
+  process.once("disconnect", () => stop("launcher gone"));
 }
