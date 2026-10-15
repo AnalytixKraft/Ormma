@@ -72,36 +72,34 @@ function tidy(text) {
     .trim();
 }
 
-/* The organiser's morning note: every wish the day holds — at
- * what time, to where, and what it says — then the birthdays coming up.
- *   wishes  today's wish jobs, in the order they go out ({time, to, person,
- *           text, sent}); to is null for someone with no "Send to"
- *   later   upcomingBirthdays() after today */
-export function renderReminder({ date, wishes, later }) {
-  const lines = [`🎉 *Today's wishes* · ${formatShortDate(date)}`];
-  if (!wishes.length) lines.push("", "No wishes to send today.");
-  for (const wish of wishes) {
-    const note = occasionNote(wish.person, date);
-    const who = `${KIND_ICON[wish.person.kind] ?? "🎂"} ${wish.person.name}${note ? ` (${note})` : ""}`;
-    lines.push("");
-    if (!wish.to) {
-      lines.push(`⚠️ ${who} — no “Send to” chosen, so nothing will be sent`);
-      continue;
-    }
-    lines.push(`${wish.sent ? "✓" : "•"} *${wish.time}* → ${wish.to.label} — ${who}${wish.sent ? " · sent" : ""}`);
-    lines.push(quoted(wish.text));
-  }
-  if (later.length) {
-    lines.push("", "*Coming up*");
-    for (const { person, date: day, inDays } of later) {
-      const note = occasionNote(person, day);
-      lines.push(`• ${inDays === 1 ? "Tomorrow" : formatShortDate(day)} — ${KIND_ICON[person.kind] ?? "🎂"} ${person.name}${note ? ` (${note})` : ""}`);
-    }
+/* The organiser's morning reminder is a message for each wish the day
+ * holds, so that a "delete" in reply to one stops that wish (capture.mjs):
+ * whose, at what time, to where, and what it says.
+ *   wish  a wish job of today's ({time, to, person, text}); to is null for
+ *         someone with no "Send to"
+ *   state 'skipped' when "delete" was answered already, else null */
+export function renderWishNote({ date, wish, state = null }) {
+  const note = occasionNote(wish.person, date);
+  const who = `${KIND_ICON[wish.person.kind] ?? "🎂"} ${wish.person.name}${note ? ` (${note})` : ""}`;
+  const lines = [`🎉 *Today's wish* · ${formatShortDate(date)}`];
+  if (!wish.to) return [...lines, `⚠️ ${who} — no “Send to” chosen, so nothing will be sent`].join("\n");
+  lines.push(`${who} — *${wish.time}* → ${wish.to.label}`, quoted(wish.text), "");
+  lines.push(state === "skipped" ? "It won’t be sent: you said “delete”." : "Reply “delete” to this and it won’t be sent.");
+  return lines.join("\n");
+}
+
+/* The birthdays and anniversaries of the next few days, after the day's
+ * wishes: upcomingBirthdays() after today. */
+export function renderComingUp({ later }) {
+  const lines = ["🎉 *Coming up*"];
+  for (const { person, date: day, inDays } of later) {
+    const note = occasionNote(person, day);
+    lines.push(`• ${inDays === 1 ? "Tomorrow" : formatShortDate(day)} — ${KIND_ICON[person.kind] ?? "🎂"} ${person.name}${note ? ` (${note})` : ""}`);
   }
   return lines.join("\n");
 }
 
-/* A message inside the note, as a WhatsApp quote ("> "), cut short if long. */
+/* A message inside another, as a WhatsApp quote ("> "), cut short if long. */
 function quoted(text) {
   const short = text.length > 240 ? `${text.slice(0, 239).trimEnd()}…` : text;
   return short
@@ -174,7 +172,7 @@ export function alertSummary(text) {
 /* A message an alert is about: whose, to where, at what time. */
 function alertLine(job) {
   const what = {
-    reminder: "🗓️ *Your morning reminder*",
+    reminder: job.person ? `🗓️ *Your morning reminder of ${job.person.name}*` : "🗓️ *Your morning reminder*",
     agenda: "🗓️ *Your day*",
     event: `⏰ *${job.title}*`,
   }[job.kind] ?? `${KIND_ICON[job.person.kind] ?? "🎂"} *${job.person.name}*`;

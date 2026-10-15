@@ -162,7 +162,7 @@ ${whatsappSection(wa)}
         ${error(errors.daysAhead)}
       </label>
     </div>
-    <p class="hint">Before the wishes go out, the reminder lists every wish of the day — its time, where it goes, what it says — and the birthdays and anniversaries this many days ahead. “This WhatsApp” puts it in the linked phone’s own chat (Message yourself). Previews go to your number, or to the linked phone if you leave it empty.</p>
+    <p class="hint">Before the wishes go out, the reminder sends a message for each wish of the day — its time, where it goes, what it says — and one of the birthdays and anniversaries this many days ahead. Reply “delete” to a wish’s message and that wish is not sent today (in a chat ticked under Where 📅 messages count, below). “This WhatsApp” puts it in the linked phone’s own chat (Message yourself). Previews go to your number, or to the linked phone if you leave it empty.</p>
   </fieldset>
 
   <fieldset class="settings-group" id="calendar">

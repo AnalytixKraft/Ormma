@@ -609,3 +609,65 @@ test("pages are read back only where the owner writes: not from a group where on
   assert.deepEqual(bridge.acked, ["A", "B"]);
   assert.equal(db.journal.get("2026-10-08").body, "10:00 — Coffee with Tom", "not written on the page either");
 });
+
+test("“delete” in reply to a wish's morning reminder stops that wish today — said by the owner only, and too late once it has gone", async () => {
+  const claude = fakeClaude({});
+  // 10:30 in India: the reminders (07:00) are due; the wishes go at 12:00.
+  const { db, bridge, scheduler, capture, at } = setup([], { reminderTo: "self", wishTime: "12:00" }, claude);
+  const asha = db.people.create({ name: "Asha", day: 8, month: 10, sendTo: FAMILY, createdAt: "2026-09-01T00:00:00Z" });
+  const ben = db.people.create({ name: "Ben", day: 8, month: 10, sendTo: FAMILY, createdAt: "2026-09-01T00:00:00Z" });
+  await scheduler.run();
+  const noteOf = (id) => db.deliveries.get(`reminder:2026-10-08:${id}`).message_id;
+  assert.equal(bridge.sent.length, 2);
+  const answers = () => bridge.sent.filter((s) => s.key.startsWith("capture:")).map((s) => [s.key, s.chatId, s.text]);
+
+  // In Message yourself a reply has no mark: the bridge holds it only as a
+  // reply to one of its own messages.
+  const reply = (id, text, to, extra = {}) => command(id, text, { marked: false, mark: "reply", quoted_id: to, ...extra });
+  bridge.held = [
+    reply("A", "delete", noteOf(asha)),
+    reply("B", "Delete", noteOf(asha)),
+    reply("C", "thanks", noteOf(ben)),
+    inFamily("D", "delete", { marked: true, mark: "calendar", quoted_id: noteOf(ben) }),
+    reply("E", "remind me to call Ben", "not-the-apps"),
+  ];
+  assert.equal(await capture.poll(), 0, "nothing added");
+  assert.deepEqual(answers(), [
+    ["capture:A", SELF_JID, "🚫 *Asha*’s wish won’t be sent today.\nTo send it after all: Ormma → People → Send now."],
+    ["capture:B", SELF_JID, "*Asha*’s wish is stopped already."],
+    ["capture:C", SELF_JID, "Only “delete” works as a reply to that: it stops *Ben*’s wish today."],
+    ["capture:D", SELF_JID, "Anu replied to the reminder of *Ben*’s wish in Family. Only you can stop a wish, so it still goes."],
+  ]);
+  assert.deepEqual(claude.asked, [], "Claude reads no reply");
+  assert.equal(db.events.count(), 0);
+  assert.deepEqual(bridge.acked, ["A", "B", "C", "D", "E"]);
+  assert.equal(db.deliveries.get(`wish:2026-10-08:${asha}`).status, "skipped");
+
+  at("2026-10-08T06:31:00Z"); // 12:01
+  await scheduler.run();
+  assert.deepEqual(bridge.sent.filter((s) => s.key.startsWith("wish:")).map((s) => s.key), [`wish:2026-10-08:${ben}`], "Ben's only");
+
+  bridge.held = [reply("F", "delete", noteOf(ben))];
+  await capture.poll();
+  assert.deepEqual(answers().at(-1), ["capture:F", SELF_JID, "Too late: *Ben*’s wish went at 12:01."]);
+
+  at("2026-10-09T02:00:00Z"); // the next day
+  bridge.held = [reply("G", "delete", noteOf(ben))];
+  await capture.poll();
+  assert.deepEqual(answers().at(-1), ["capture:G", SELF_JID, "That was the reminder for Thu 8 Oct — that day is over."]);
+});
+
+test("in a group where every message counts, “delete” in reply to a wish's reminder stops it too; someone deleted is no one's wish", async () => {
+  const { db, bridge, scheduler, capture } = setup([], { reminderTo: FAMILY, calendarTo: FAMILY, captureEvery: [FAMILY], wishTime: "12:00" }, fakeClaude({}));
+  const asha = db.people.create({ name: "Asha", day: 8, month: 10, sendTo: "self", createdAt: "2026-09-01T00:00:00Z" });
+  const ben = db.people.create({ name: "Ben", day: 8, month: 10, sendTo: "self", createdAt: "2026-09-01T00:00:00Z" });
+  await scheduler.run();
+  const noteOf = (id) => db.deliveries.get(`reminder:2026-10-08:${id}`).message_id;
+  db.people.remove(ben);
+  bridge.held = [inFamily("A", "❌", { marked: false, quoted_id: noteOf(asha) }), inFamily("B", "don't send", { marked: false, quoted_id: noteOf(ben) })];
+  await capture.poll();
+  assert.deepEqual(bridge.sent.slice(2).map((s) => [s.chatId, s.text]), [
+    [FAMILY, "🚫 *Asha*’s wish won’t be sent today.\nTo send it after all: Ormma → People → Send now."],
+    [FAMILY, "*Ben* has no wish today any more."],
+  ]);
+});

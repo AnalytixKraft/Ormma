@@ -138,13 +138,13 @@ test("calendar messages go where Settings says — never with the wishes' remind
   const { db, bridge, scheduler } = setup("2026-09-30T03:00:00Z"); // 08:30
   db.chats.remember([{ id: YOUTH, subject: "Youth" }]);
   db.settings.save({ reminderTo: YOUTH, myPhone: MY_PHONE });
-  db.people.create({ name: "Biju", day: 30, month: 9, sendTo: YOUTH, createdAt: "2026-09-01T00:00:00Z" });
+  const biju = db.people.create({ name: "Biju", day: 30, month: 9, sendTo: YOUTH, createdAt: "2026-09-01T00:00:00Z" });
   db.events.create({ title: "Private appointment", day: "2026-09-30", time: "17:00" });
   await scheduler.run();
   const to = new Map(bridge.sent.map((s) => [s.key, s.chatId]));
-  assert.equal(to.get("reminder:2026-09-30"), YOUTH);
+  assert.equal(to.get(`reminder:2026-09-30:${biju}`), YOUTH);
   assert.equal(to.get("agenda:2026-09-30"), SELF);
-  assert.doesNotMatch(bridge.sent.find((s) => s.key === "reminder:2026-09-30").text, /Private appointment/);
+  assert.doesNotMatch(bridge.sent.find((s) => s.key === `reminder:2026-09-30:${biju}`).text, /Private appointment/);
 
   const other = setup("2026-09-30T03:00:00Z");
   other.db.settings.save({ calendarTo: "direct", myPhone: MY_PHONE });

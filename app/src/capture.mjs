@@ -15,6 +15,8 @@
  *                                    an event "Choir moves", Saturday 18:00
  *   a reply of "delete" to "✅ Added to the calendar: *Doc* …"
  *                                    Doc taken off the calendar again
+ *   a reply of "delete" to the morning's "🎉 Today's wish … Anu"
+ *                                    Anu's wish not sent today
  *   remind me to call Renjith        a reminder: at the morning time
  *                                    (07:00 unless changed), the next morning
  *   📝 Coffee with Tom, he's well    a line on the day's journal page, with
@@ -249,6 +251,9 @@ export function renderCaptureReply(item) {
 /* A reply that asks to take something off the calendar again. */
 const DELETE = /^\s*(?:please\s+)?(?:delete|remove|cancel|del)\b|^\s*(?:\u274C|\u2716|\u{1F5D1})/iu;
 export const isDelete = (text) => DELETE.test(text);
+/* A reply to a wish's morning reminder that says not to send it. */
+const STOP_WISH = /^\s*(?:stop|skip|don['’]?t send|do not send)\b/i;
+export const isStopWish = (text) => isDelete(text) || STOP_WISH.test(text);
 /* A reply that says a reminder's work is done. */
 const DONE = /^\s*(?:done|did it|completed?|finished|called|paid|stop)\b|^\s*(?:\u2705|\u2714|\u{1F44D})/iu;
 export const isDone = (text) => DONE.test(text);
@@ -635,6 +640,51 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     return { title, text: event.reminder ? `✅ Done: *${title}* — no more reminders.` : `🗑️ Deleted: *${title}*` };
   }
 
+  /* A reply to a wish's morning reminder: "delete", and that wish is not
+   * sent today (its delivery is `skipped` — the scheduler never sends it;
+   * Send now on the People page still does). Only the owner may say so: in
+   * Message yourself, from their own number, or in a group where every
+   * message counts — not anyone else in a group the reminder goes to. */
+  function answerWishNote(command, note, settings) {
+    db.captures.record(command);
+    const title = "Stop a wish";
+    const name = note.title ?? note.person_name ?? "that person";
+    if (!(command.from_me || command.chat === "self" || everyOf(settings).includes(command.chat_id))) {
+      return { title, text: `${command.sender ?? "Someone"} replied to the reminder of *${name}*’s wish in ${whereOf(command)}. Only you can stop a wish, so it still goes.` };
+    }
+    if (!isStopWish(command.text)) return { title, text: `Only “delete” works as a reply to that: it stops *${name}*’s wish today.` };
+    const { date } = scheduler.today();
+    if (note.day !== isoDate(date)) return { title, text: `That was the reminder for ${formatShortDate(fromIsoDate(note.day))} — that day is over.` };
+    // Ids are used again: the person must still be the one it was about.
+    const wish = scheduler.agenda().find((job) => job.kind === "wish" && job.person.id === note.person_id && job.person.name === name);
+    if (!wish) return { title, text: `*${name}* has no wish today any more.` };
+    const state = wish.delivery?.status;
+    if (state === "skipped") return { title, text: `*${name}*’s wish is stopped already.` };
+    if (state === "sending") return { title, text: `Too late: *${name}*’s wish is going out now.` };
+    if (state === "sent") {
+      const at = zonedNow(new Date(wish.delivery.updated_at), settings.timezone);
+      return { title, text: `Too late: *${name}*’s wish went at ${pad(at.hour)}:${pad(at.minute)}.` };
+    }
+    const stopped = db.deliveries.skip({ key: wish.key, day: wish.day, person: wish.person, to: wish.to }, clock().toISOString(), "You replied “delete” to its morning reminder.");
+    if (!stopped) return { title, text: `Too late: *${name}*’s wish is going out now.` };
+    log.info({ message_id: command.id, person: note.person_id }, "a wish stopped by a reply to its reminder");
+    return { title, text: [`🚫 *${name}*’s wish won’t be sent today.`, "To send it after all: Ormma → People → Send now."].join("\n") };
+  }
+
+  /* A reply to one of the app's own messages — a wish's morning reminder,
+   * a "✅ Added …", an event's "⏰ …" — answered as that: {answer}; or
+   * undefined, when it is not one of those. */
+  function answerTo(command, settings) {
+    if (!command.quoted_id) return undefined;
+    const note = db.deliveries.wishNote(command.quoted_id);
+    if (note) return { answer: answerWishNote(command, note, settings) };
+    const answered = db.deliveries.captureAnswer(command.quoted_id);
+    if (answered) return { answer: answerReply(command, answered, settings) };
+    const reminded = db.deliveries.eventReminder(command.quoted_id);
+    if (reminded) return { answer: answerReminder(command, reminded) };
+    return undefined;
+  }
+
   /* A reply to one of the app's own "✅ Added …": "delete" takes that off
    * the calendar again; anything else is not read as something new. A
    * reply to its "⚠️ Delete …?" is the answer to that. The answer, or null
@@ -670,11 +720,19 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
   }
 
   /* Puts one message on the calendar. → what it became; {answer} for a
-   * reply to the app's own "✅ Added …"; null when it was let go without
+   * reply to one of the app's own messages; null when it was let go without
    * adding anything; LATER to leave it with the bridge. */
   async function take(command, settings) {
     if (!chosen(settings).includes(keyOf(command))) {
       // Held by the bridge before the chat was let go of: not added.
+      db.captures.record(command);
+      return null;
+    }
+    if (command.mark === "reply") {
+      // No mark: held by the bridge only as a reply to one of its own
+      // messages (commands.mjs). An answer to that, never anything new.
+      const replied = answerTo(command, settings);
+      if (replied) return replied;
       db.captures.record(command);
       return null;
     }
@@ -684,10 +742,8 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     // 📝: for the diary, whatever else it says — a reply of 📝 to a message
     // keeps that message on the page.
     if (command.mark === "note") return addNote(command, command.text, settings);
-    const answered = command.quoted_id ? db.deliveries.captureAnswer(command.quoted_id) : null;
-    if (answered) return { answer: answerReply(command, answered, settings) };
-    const reminded = command.quoted_id ? db.deliveries.eventReminder(command.quoted_id) : null;
-    if (reminded) return { answer: answerReminder(command, reminded) };
+    const replied = answerTo(command, settings);
+    if (replied) return replied;
     const everyMessage = command.marked === false && everyOf(settings).includes(command.chat_id);
     const noted = everyMessage ? readNotePrefix(command.text) : null;
     if (noted !== null) return addNote(command, noted, settings);

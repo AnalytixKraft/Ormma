@@ -539,7 +539,7 @@ fieldset .check { margin-top: 6px; }
 .job:first-child { border-top: 0; padding-top: 0; }
 .job__title { margin: 0; grid-column: 1; grid-row: 1; }
 .job__state { margin: 0; display: flex; gap: 6px; font: 400 0.84rem/1.4 var(--font-ui); color: var(--ink-soft); grid-column: 2; grid-row: 1; white-space: nowrap; }
-.job--failed .job__state { grid-column: 1; grid-row: 2; white-space: normal; }
+.job--failed .job__state, .job--skipped .job__state { grid-column: 1; grid-row: 2; white-space: normal; }
 .job .inline-form { grid-column: 2; grid-row: 1 / span 2; }
 .job .inline-form .button { margin: 0; }
 @media (max-width: 520px) {
@@ -551,7 +551,7 @@ fieldset .check { margin-top: 6px; }
 .tick { display: inline-block; min-width: 1.1em; text-align: center; font-weight: 700; }
 .tick--sent { color: var(--sent); }
 .tick--failed { color: var(--danger); }
-.tick--due, .tick--sending { color: var(--ink-soft); }
+.tick--due, .tick--sending, .tick--skipped { color: var(--ink-soft); }
 
 /* Coming up: a tab for each day that holds someone, and who. */
 .upcoming__list { list-style: none; margin: 0; padding: 0; }

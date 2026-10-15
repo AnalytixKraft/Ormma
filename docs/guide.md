@@ -85,27 +85,33 @@ WhatsApp formatting works: `*bold*`, `_italic_`. A 29 February birthday or anniv
 
 ## The morning reminder
 
-At the reminder time (06:00 unless you change it) the app sends you the day's plan — before any wish goes out:
+At the reminder time (06:00 unless you change it) the app sends you the day's wishes, before any of them goes out — **a message for each wish**:
 
 ```
-🎉 Today's wishes · Wed 30 Sep
-
-• 08:00 → St. Mary's Youth — 🎂 Biju Thomas
-> Happy birthday, Biju! 🎉
-
-• 08:00 → St. Mary's Youth — 💍 Joseph & Mary (25 years)
-> Happy anniversary, Joseph & Mary! 💍
-
-⚠️ 🎂 Mary K — no “Send to” chosen, so nothing will be sent
-
-• 09:30 → +91 98765 43210 — 🎂 Anu Joseph (turns 30)
+🎉 Today's wish · Wed 30 Sep
+🎂 Anu Joseph (turns 30) — 09:30 → +91 98765 43210
 > Happy birthday, Anu! 🎂
 
-Coming up
+Reply “delete” to this and it won’t be sent.
+```
+
+```
+🎉 Today's wish · Wed 30 Sep
+⚠️ 🎂 Mary K — no “Send to” chosen, so nothing will be sent
+```
+
+and, when Settings looks a few days ahead, one more message of what is coming up:
+
+```
+🎉 Coming up
 • Tomorrow — 🎂 Jose P
 ```
 
-It goes to the linked phone, your own number, or a group (Settings → *Send my daily reminder to*); on a day with nothing to say, it is not sent.
+It goes to the linked phone, your own number, or a group (Settings → *Send my daily reminder to*); on a day with nothing to say, nothing is sent. A wish sent before the reminder time (with **Send now**) gets no message.
+
+**Not sending one?** Reply `delete` to that wish's message (or `remove`, `cancel`, `skip`, `don't send`, ❌) and that wish is not sent today: “🚫 *Anu Joseph*’s wish won’t be sent today.” The answer comes where calendar messages go. Today shows it as *Won’t be sent*; to send it after all, press **Send now** on the person's page. Only the wish of that day stops — the person stays on the list, and next year's wish goes as usual. Once the wish has gone, it is too late, and the answer says so.
+
+The reply is read in a chat ticked under *Settings → Calendar → Where 📅 messages count* — *Message yourself* is, unless you changed it. In Message yourself, and anywhere from your own phone, `delete` alone does it; the bridge passes on your own replies to the messages it sent in the last day (restarted, it forgets which those were — reply `📅 delete` then). In a group where every message counts, anyone there may stop a wish; in a group others share, no one but you.
 
 ## Alerts
 
@@ -172,7 +178,7 @@ Start a WhatsApp message with 📅 (or 📆), in a chat ticked in **Settings →
 
 To add what someone else wrote — “Choir moves to Sat 6pm” — **reply to it with just 📅**. Your own words in the reply become the title (`📅 choir`), and a day or time in it wins over theirs.
 
-**Added the wrong thing?** Reply `delete` to the app's “✅ Added to the calendar …” message (or `remove`, `cancel`, ❌, 🗑️) and it comes off the calendar again: “🗑️ Deleted: *Doc* — Wed 14 Oct, 22:00”. In a group where every message counts, `delete` alone does it; elsewhere, `📅 delete`. Anything else said in reply to it adds nothing — other changes are made in **Calendar**.
+**Added the wrong thing?** Reply `delete` to the app's “✅ Added to the calendar …” message (or `remove`, `cancel`, ❌, 🗑️) and it comes off the calendar again: “🗑️ Deleted: *Doc* — Wed 14 Oct, 22:00”. Your own reply of `delete` alone does it, in any chat ticked for 📅 messages, and so does anyone's in a group where every message counts; someone else in a group you share needs `📅 delete`. Anything else said in reply to it adds nothing — other changes are made in **Calendar**.
 
 ### Reminders
 

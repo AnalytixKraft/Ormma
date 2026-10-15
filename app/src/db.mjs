@@ -349,6 +349,35 @@ const MIGRATIONS = [
     UPDATE captures SET item_id = NULL WHERE kind = 'note' AND item_id = old.id;
   END;
   `,
+  // 12 — the morning reminder is a message for each wish, and "delete" in
+  // reply to one stops that wish for the day: its delivery is `skipped`,
+  // and the scheduler never sends it. SQLite cannot change a CHECK, hence
+  // the new table.
+  `
+  CREATE TABLE deliveries_12 (
+    key          TEXT    PRIMARY KEY,
+    day          TEXT    NOT NULL,
+    kind         TEXT    NOT NULL CHECK (kind IN ('wish', 'reminder', 'test', 'alert', 'event', 'agenda', 'capture')),
+    person_id    INTEGER,
+    person_name  TEXT,
+    chat_id      TEXT    NOT NULL,
+    chat_subject TEXT    NOT NULL DEFAULT '',
+    status       TEXT    NOT NULL CHECK (status IN ('pending', 'sending', 'sent', 'failed', 'skipped')),
+    attempts     INTEGER NOT NULL DEFAULT 0,
+    message_id   TEXT,
+    error        TEXT,
+    created_at   TEXT    NOT NULL DEFAULT (${NOW}),
+    updated_at   TEXT    NOT NULL DEFAULT (${NOW}),
+    text         TEXT,
+    alerted_at   TEXT,
+    title        TEXT
+  );
+  INSERT INTO deliveries_12 SELECT key, day, kind, person_id, person_name, chat_id, chat_subject, status, attempts, message_id, error, created_at, updated_at, text, alerted_at, title FROM deliveries;
+  DROP TABLE deliveries;
+  ALTER TABLE deliveries_12 RENAME TO deliveries;
+  CREATE INDEX deliveries_by_day ON deliveries (day);
+  CREATE INDEX deliveries_by_update ON deliveries (updated_at);
+  `,
 ];
 
 function migrate(db) {
@@ -620,6 +649,18 @@ export function openDb(file, { defaultTimezone = "Asia/Kolkata" } = {}) {
     captureAnswer: (messageId) => delivery(q("SELECT * FROM deliveries WHERE message_id = ? AND kind = 'capture'").get(messageId)),
     /* An event's reminder that WhatsApp gave this id, or null. */
     eventReminder: (messageId) => delivery(q("SELECT * FROM deliveries WHERE message_id = ? AND kind = 'event'").get(messageId)),
+    /* The morning reminder of one wish that WhatsApp gave this id, or null. */
+    wishNote: (messageId) =>
+      delivery(q("SELECT * FROM deliveries WHERE message_id = ? AND kind = 'reminder' AND person_id IS NOT NULL").get(messageId)),
+    /* A wish not to be sent ("delete" in reply to its morning reminder):
+     * `skipped`, unless it has gone or is going. → whether it is now */
+    skip: ({ key, day, person: p, to }, at, why) =>
+      q(
+        `INSERT INTO deliveries (key, day, kind, person_id, person_name, chat_id, chat_subject, status, attempts, error, created_at, updated_at)
+         VALUES (?, ?, 'wish', ?, ?, ?, ?, 'skipped', 0, ?, ?, ?)
+         ON CONFLICT (key) DO UPDATE SET status = 'skipped', error = excluded.error, updated_at = excluded.updated_at
+           WHERE status NOT IN ('sent', 'sending')`,
+      ).run(key, day, p.id, p.name, to?.id ?? "", to?.label ?? "", why, at, at).changes > 0,
     /* History is kept for a year; older rows go. */
     prune: (beforeDay) => q("DELETE FROM deliveries WHERE day < ?").run(beforeDay).changes,
   };
