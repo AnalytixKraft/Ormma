@@ -2,7 +2,7 @@
 
 <h1 align="center">Ormma</h1>
 
-<p align="center"><em>ഓർമ്മ — Malayalam for memory.</em> Your diary and reminders, with WhatsApp as the way in and out.</p>
+<p align="center">Your diary and reminders, with WhatsApp as the way in and out.</p>
 
 <p align="center">
   <a href="https://github.com/AnalytixKraft/Ormma/releases/latest"><b>Download for Mac or Windows</b></a> ·

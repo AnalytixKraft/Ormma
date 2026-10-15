@@ -10,12 +10,9 @@ import { html, raw } from "./html.mjs";
 /* What the app is called on its pages. (Inside, it keeps its first name —
  * the Docker project, the volumes, the cookie — so a rename loses nothing.) */
 export const APP_NAME = "Ormma";
-/* Malayalam for memory, remembrance — a diary, reminders, and the people to
+/* What it is, under its name: a diary, reminders, and the people to
  * remember on their day. */
-export const APP_TAGLINE = "ഓർമ്മ — your diary and reminders";
-/* The weekdays in Malayalam, printed beside the English as a Kerala diary
- * prints them. */
-export const WEEKDAYS_ML = ["ഞായർ", "തിങ്കൾ", "ചൊവ്വ", "ബുധൻ", "വ്യാഴം", "വെള്ളി", "ശനി"];
+export const APP_TAGLINE = "Your diary and reminders";
 
 export const iconOf = (kind) => KIND_ICON[kind] ?? KIND_ICON.birthday;
 export const occasionWord = (kind) => (kind === "anniversary" ? "anniversary" : "birthday");
@@ -66,7 +63,7 @@ export function layout({ title, active = null, body, flash = null, signedIn = tr
 <body>
 ${signedIn
   ? html`<header class="cover">
-  <a class="brand" href="/"><img class="brand__mark" src="/static/favicon.svg" alt="" width="30" height="30"><span class="brand__text"><span class="brand__name" lang="ml">ഓർമ്മ</span><span class="brand__latin">${APP_NAME}</span></span></a>
+  <a class="brand" href="/"><img class="brand__mark" src="/static/favicon.svg" alt="" width="30" height="30"><span class="brand__name">${APP_NAME}</span></a>
   <nav class="nav" aria-label="Main">
     ${NAV.map(([key, href, label]) => html`<a href="${href}"${key === active ? raw(' aria-current="page"') : ""}>${label}</a>`)}
   </nav>
@@ -85,7 +82,7 @@ ${body}
 
 /* The day as a diary prints it at the head of a page: the day of the year,
  * the numeral (red on a Sunday, as every calendar here prints it), the
- * weekday in English and Malayalam, the month — and, written in below,
+ * weekday, the month — and, written in below,
  * the people to remember. `size` is "large" (the page's head) or "small"
  * (a thumb tab beside something); `heading` the level its (visually
  * hidden) title takes in the page's outline. */
@@ -99,7 +96,7 @@ export function dayHeader({ date, size = "large", people = [], caption = null, h
   ${raw(`<${heading} class="visually-hidden">`)}${title}${raw(`</${heading}>`)}
   ${large ? html`<p class="day__count" aria-hidden="true">Day ${count.n} · ${count.left} left</p>` : ""}
   <p class="day__num" aria-hidden="true">${date.day}</p>
-  <p class="day__weekday" aria-hidden="true"><span class="day__en">${large ? WEEKDAYS[wd] : WEEKDAYS[wd].slice(0, 3)}</span><span class="day__ml" lang="ml">${WEEKDAYS_ML[wd]}</span></p>
+  <p class="day__weekday" aria-hidden="true"><span class="day__en">${large ? WEEKDAYS[wd] : WEEKDAYS[wd].slice(0, 3)}</span></p>
   <p class="day__month" aria-hidden="true">${large ? `${MONTHS[date.month - 1]} ${date.year}` : MONTHS[date.month - 1].slice(0, 3)}</p>
   ${names.length
     ? html`<ul class="day__people">${names.map(

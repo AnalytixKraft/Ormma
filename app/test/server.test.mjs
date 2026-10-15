@@ -77,7 +77,7 @@ test("the sign-in page carries the security headers", async () => {
   assert.equal(res.headers.get("x-frame-options"), "DENY");
   const page = await res.text();
   assert.match(page, /Sign in/);
-  assert.match(page, /<h1>Ormma<\/h1>\s*<p class="signin__tagline">ഓർമ്മ — your diary and reminders<\/p>/);
+  assert.match(page, /<h1>Ormma<\/h1>\s*<p class="signin__tagline">Your diary and reminders<\/p>/);
 });
 
 test("a wrong password is refused; the right one signs in", async () => {
@@ -610,7 +610,10 @@ test("the pages are a diary: the cover's icon and manifest are served, the day i
   assert.match(home, /<a class="brand" href="\/"><img class="brand__mark" src="\/static\/favicon.svg" alt="" width="30" height="30">/);
   assert.match(home, /<a href="\/" aria-current="page">Today<\/a>/);
   assert.match(home, /<p class="day__count" aria-hidden="true">Day \d{1,3} · \d{1,3} left<\/p>/);
-  assert.match(home, /<span class="day__ml" lang="ml">(ഞായർ|തിങ്കൾ|ചൊവ്വ|ബുധൻ|വ്യാഴം|വെള്ളി|ശനി)<\/span>/);
+  assert.match(home, /<span class="brand__name">Ormma<\/span><\/a>/);
+  // Ormma's own words are English: no Malayalam on its pages but what someone wrote.
+  assert.doesNotMatch(home, /[\u0D00-\u0D7F]/);
+  assert.doesNotMatch(await (await get("/login")).text(), /[\u0D00-\u0D7F]/);
   assert.match(home, /<h2 id="messages-title">Messages<\/h2>/);
   assert.match(await (await get("/calendar", cookie)).text(), /<nav class="months" aria-label="The months of \d{4}">(<a href="\/calendar\?month=\d{4}-\d{2}"[^>]*>[A-Z][a-z]{2}<span class="visually-hidden">[^<]*<\/span><\/a>){12}<\/nav>/);
 });

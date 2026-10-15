@@ -14,6 +14,6 @@ The first release with downloads for Mac and Windows.
 - **Reminders that keep coming until done**: `remind me to call Renjith` — three days, then every other day for ten, until you reply `done`.
 - **The people to remember**: birthdays and anniversaries, wished on WhatsApp at their time, in a group or to their own number; a morning reminder of every wish the day holds; an alert when one was not sent.
 - **Documentation and screenshots**: an install guide, a user guide, and a demo with made-up data that needs no WhatsApp (`node scripts/demo/run.mjs`).
-- **A new icon**: a leather diary with *Memory* stamped in gold, a quill, and a ribbon.
+- **A new icon**, and the name in English: a leather diary with *Memory* stamped in gold, a quill and a ribbon; *Ormma* on every page, in English throughout.
 - The People table has room for a whole phone number, and for a time on a 12-hour clock.
 - **Licence**: the Apache License 2.0, until now MIT. Share Ormma with its NOTICE file, which credits AnalytixKraft.

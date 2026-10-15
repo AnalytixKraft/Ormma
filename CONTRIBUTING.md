@@ -29,7 +29,7 @@ That last one is Ormma with made-up data and no WhatsApp, at <http://127.0.0.1:3
 - One change per pull request, with tests for what it changes. `npm test` in `app/`, `whatsapp/` and `desktop/` must pass; CI runs them, and builds and tries the desktop app on a Mac and on Windows.
 - Write like the code around it: plain Node, no new dependency without a good reason, and comments that say *why*. Pages are rendered on the server; the browser gets no inline script and nothing from other sites.
 - Words on the pages are plain and exact: say what happens, in the order it happens, as you would to someone who does not know how it works.
-- Keep the look: the bound diary in `app/public/style.css` — the green cover, the ribbon, the day printed in two scripts — with the fonts that ship with the computer, and no web fonts.
+- Keep the look: the bound diary in `app/public/style.css` — the green cover, the ribbon, the day printed as a diary prints it — with the fonts that ship with the computer, and no web fonts.
 - If the change shows on a page, add a screenshot to the pull request; if it changes a picture in the docs, retake it (`node scripts/demo/screenshots.mjs --start-demo --only <name>`).
 - If it changes what someone does, change the docs with it: [the user guide](docs/guide.md), [the install guide](docs/install.md), and [CHANGELOG.md](CHANGELOG.md) under *Unreleased*.
 
