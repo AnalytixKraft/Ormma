@@ -13,6 +13,10 @@ export const APP_NAME = "Ormma";
 /* What it is, under its name: a diary, reminders, and the people to
  * remember on their day. */
 export const APP_TAGLINE = "Your diary and reminders";
+/* Where Ormma's source is, for the notice at the foot of every page. The
+ * AGPL-3.0 (section 13) asks whoever runs a changed Ormma for other people
+ * to offer them its source: point this at yours. */
+export const SOURCE_URL = "https://github.com/AnalytixKraft/Ormma";
 
 export const iconOf = (kind) => KIND_ICON[kind] ?? KIND_ICON.birthday;
 export const occasionWord = (kind) => (kind === "anniversary" ? "anniversary" : "birthday");
@@ -74,9 +78,17 @@ ${signedIn
 ${flash ? html`<div class="flash flash--${flash.type}" role="${flash.type === "error" ? "alert" : "status"}">${flash.text}</div>` : ""}
 ${body}
 </main>
+${colophon()}
 </body>
 </html>`;
 }
+
+/* The Appropriate Legal Notices the AGPL-3.0 asks for (section 5(d)) — who
+ * made it, that it comes with no warranty, its licence — and the credit to
+ * AnalytixKraft that NOTICE asks everyone to keep (section 7(b)). */
+const colophon = () => html`<footer class="colophon">
+  <a href="${SOURCE_URL}">${APP_NAME}</a> by AnalytixKraft · © 2026 · free software under the <a href="${SOURCE_URL}/blob/main/LICENSE">GNU AGPL-3.0</a>, with no warranty · <a href="${SOURCE_URL}">source code</a>
+</footer>`;
 
 /* ------------------------------------------------------- the printed day */
 

@@ -1,10 +1,19 @@
 Ormma
-Copyright 2026 AnalytixKraft
+Copyright (C) 2026 AnalytixKraft
 
-This product includes software developed by AnalytixKraft
-(https://github.com/AnalytixKraft/Ormma).
+Ormma is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License, version 3 only
+(AGPL-3.0-only), as published by the Free Software Foundation. It comes with
+NO WARRANTY; LICENSE has the details.
 
-Ormma's WhatsApp bridge uses Baileys (MIT), which uses libsignal (GPL-3.0).
-The desktop downloads include both, each with its licence and its source,
-and the Node.js runtime under its own licence (licenses/node.txt). Every
-other package they bundle keeps its licence in its own folder.
+Additional terms, under section 7(b) of the AGPL-3.0:
+
+  Whoever conveys Ormma, or a work based on it, must preserve the author
+  attribution "Ormma by AnalytixKraft" — in this NOTICE file, and in the
+  Appropriate Legal Notices at the foot of every page Ormma shows.
+
+Ormma's WhatsApp bridge uses Baileys (MIT), which uses libsignal (GPL-3.0);
+the AGPL-3.0 and the GPL-3.0 allow the two to be combined (section 13 of
+each). The desktop downloads include both, each with its licence and its
+source, and the Node.js runtime under its own licence (licenses/node.txt).
+Every other package they bundle keeps its licence in its own folder.

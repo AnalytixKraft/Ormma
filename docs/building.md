@@ -24,6 +24,8 @@ The pages are rendered on the server; `app/public/app.js` only adds confirmation
 
 The pages are drawn as a bound diary — the green cover with the gold stamp, the ribbon that marks the open section, the day printed as a diary prints it — in `app/public/style.css`, with no web fonts: Superclarendon, Charter and Gill Sans ship with macOS and iOS, and elsewhere the stacks fall back. The icon — a leather diary with *Memory* stamped in gold, a quill and a ribbon — is drawn by `desktop/icons/make-icons.mjs`. It writes `app/public/favicon.svg` (the word as outlines, from Baskerville SemiBold with CoreText, so it looks the same with or without the font) and every size made from it: `apple-touch-icon.png`, `icon-512.png`, and the desktop app's `.icns` and `.ico`. Run it on a Mac after changing the drawing.
 
+Every page ends with Ormma's legal notice — by AnalytixKraft, the AGPL-3.0, no warranty — and a link to its source (`SOURCE_URL` in `app/src/views/layout.mjs`). If you run a changed Ormma for other people, the AGPL-3.0 asks you to offer them your source: point `SOURCE_URL` at it, and keep the credit (NOTICE).
+
 Every page but sign-in needs the session cookie, every form post must come from the app's own pages, and the Content-Security-Policy allows no inline script and nothing from other sites. Both parts listen on 127.0.0.1 only (in Docker, the compose network is the fence), and every call to the bridge but `/healthz` needs its token.
 
 ## Tests
