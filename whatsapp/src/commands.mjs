@@ -13,6 +13,13 @@
  * with text in it is held, and the app has Claude read it and add what is
  * an event or a task (`marked` says whether it had the 📅).
  *
+ * And in any chosen chat, the owner's own reply, mark or not, to a message
+ * this bridge sent in the last day (`ours`, by WhatsApp's id; memory only)
+ * — "delete" in reply to the morning reminder of a wish stops that wish, in
+ * reply to "✅ Added …" takes that off the calendar. Held as `mark:
+ * "reply"`: the app answers it as a reply to that message and does nothing
+ * else with it.
+ *
  * Which chats those are, the app says (POST /commands/chats); until it has,
  * after the bridge starts, there are none. A group not chosen is not even
  * decrypted (session.mjs, ignoresSender) — but for a quarter of an hour after
@@ -21,9 +28,9 @@
  *
  * Everything that arrives is let go of as it arrives, unread beyond the
  * checks below and never kept, unless it is a 📅 message: every message in
- * a chat not chosen, and every message without the mark. At most
- * PER_CHAT_HOUR are taken from one chat an hour, so a group cannot flood the
- * calendar — or the chat its answers go to.
+ * a chat not chosen, and every message without the mark that is not such a
+ * reply. At most PER_CHAT_HOUR are taken from one chat an hour, so a group
+ * cannot flood the calendar — or the chat its answers go to.
  *
  * A 📅 message is held in memory, never on disk, until the app takes it
  * (GET /commands) and says it has it (POST /commands/ack): at most MAX_HELD
@@ -82,6 +89,8 @@ function contextOf(message) {
 /* A chat as the app names it when choosing: "self", or the group's id. */
 export const chatKey = (chat, chatId) => (chat === "self" ? "self" : chatId);
 
+const NONE = { has: () => false };
+
 /* A message as Baileys hands it over →
  *   {command}   a 📅 message, to hold for the app;
  *   {skipped}   a message in a chosen chat with a calendar emoji in it that
@@ -89,8 +98,9 @@ export const chatKey = (chat, chatId) => (chat === "self" ? "self" : chatId);
  *   null        anything else.
  * `mine`: the linked account's own JIDs, normalised (its phone number and its
  * LID) — its own chat is either. `chats`: the chats chosen, as chatKey()
- * names them; `every`: the groups among them where every message counts. */
-export function readMessage(msg, mine, chats, every = new Set(), now = Date.now()) {
+ * names them; `every`: the groups among them where every message counts;
+ * `ours`: the ids of the messages this bridge sent lately (has(id)). */
+export function readMessage(msg, mine, chats, every = new Set(), now = Date.now(), ours = NONE) {
   if (!msg?.key || !msg.message) return null;
   const chatId = msg.key.remoteJid ? jidNormalizedUser(msg.key.remoteJid) : "";
   const chat = isJidGroup(chatId) ? "group" : mine.has(chatId) ? "self" : null;
@@ -100,14 +110,16 @@ export function readMessage(msg, mine, chats, every = new Set(), now = Date.now(
   const text = textOf(msg.message);
   if (text === null || !text.trim()) return null;
   const marked = MARK.test(text);
-  if (!marked && !every.has(chatId)) {
+  const context = contextOf(msg.message);
+  const quotedId = typeof context?.stanzaId === "string" && context.stanzaId ? context.stanzaId.slice(0, 128) : null;
+  const reply = !marked && !every.has(chatId) && fromMe && quotedId !== null && ours.has(quotedId);
+  if (!marked && !every.has(chatId) && !reply) {
     if (!CALENDARS.test(text)) return null;
     return { skipped: /^\s*\u{1F5D3}/u.test(text) ? "it starts with 🗓️, which is not 📅 or 📆" : "the 📅 or 📝 is not at the start" };
   }
   const sentAt = toNumber(msg.messageTimestamp) * 1000;
   if (!Number.isFinite(sentAt) || sentAt <= 0) return null;
   if (now - sentAt > MAX_AGE_MS) return { skipped: "it arrived more than 2 days after it was sent" };
-  const context = contextOf(msg.message);
   const quoted = context?.quotedMessage;
   const quotedText = quoted ? textOf(quoted) : null;
   return {
@@ -118,9 +130,9 @@ export function readMessage(msg, mine, chats, every = new Set(), now = Date.now(
       sent_at: new Date(sentAt).toISOString(),
       text: clip(text.replace(MARK, "").trim()),
       quoted: quotedText?.trim() ? clip(quotedText.trim()) : null,
-      quoted_id: typeof context?.stanzaId === "string" && context.stanzaId ? context.stanzaId.slice(0, 128) : null,
+      quoted_id: quotedId,
       marked,
-      mark: marked ? markOf(text) : null,
+      mark: marked ? markOf(text) : reply ? "reply" : null,
       from_me: fromMe,
       sender: fromMe ? null : nameOf(msg.pushName),
     },

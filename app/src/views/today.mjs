@@ -26,6 +26,9 @@ function deliveryLine(job, timeZone) {
   const d = job.delivery;
   if (d?.status === "sent") return html`<span class="tick tick--sent" aria-hidden="true">✓</span><span>Sent at ${clockTime(d.updated_at, timeZone)}</span>`;
   if (d?.status === "sending") return html`<span class="tick tick--sending" aria-hidden="true">…</span><span>Sending</span>`;
+  if (d?.status === "skipped") {
+    return html`<span class="tick tick--skipped" aria-hidden="true">–</span><span>Won’t be sent — you replied “delete” at ${clockTime(d.updated_at, timeZone)}. <a href="/people/${job.person.id}">Send it after all</a></span>`;
+  }
   if (d?.status === "failed") {
     return html`<span class="tick tick--failed" aria-hidden="true">✕</span><span>Not sent (${plural(d.attempts, "try", "tries")}): ${d.error}</span>`;
   }
@@ -41,6 +44,8 @@ function jobTitle(job) {
       return html`<span aria-hidden="true">🗓️</span> Your day${to(job.to.label)}`;
     case "event":
       return html`<span aria-hidden="true">⏰</span> Reminder: <strong>${job.title}</strong>${to(job.to.label)}`;
+    case "reminder":
+      return job.person ? html`Your reminder of <strong>${job.person.name}</strong>’s wish${to(job.to.label)}` : html`Your reminder: coming up${to(job.to.label)}`;
     default:
       return html`Your reminder${to(job.to.label)}`;
   }
@@ -52,7 +57,7 @@ function recentTitle(d) {
     case "wish":
       return `Wish for ${d.person_name}`;
     case "reminder":
-      return "Your reminder";
+      return d.person_name ? `Your reminder of ${d.person_name}’s wish` : "Your reminder";
     case "alert":
       return `Alert: ${alertSummary(d.text)}`;
     case "agenda":
@@ -60,7 +65,10 @@ function recentTitle(d) {
     case "event":
       return `Reminder: ${d.title ?? "an event"}`;
     case "capture":
-      return { Note: "Noted on a page, from WhatsApp", Notes: "Pages read back to WhatsApp", "Delete all": "Delete all, asked on WhatsApp" }[d.title] ?? `Added from WhatsApp: ${d.title ?? "a 📅 message"}`;
+      return (
+        { Note: "Noted on a page, from WhatsApp", Notes: "Pages read back to WhatsApp", "Delete all": "Delete all, asked on WhatsApp", "Stop a wish": "Stop a wish, asked on WhatsApp" }[d.title] ??
+        `Added from WhatsApp: ${d.title ?? "a 📅 message"}`
+      );
     default:
       return `Preview of ${d.person_name ?? "a wish"}`;
   }
@@ -74,6 +82,8 @@ function recentResult(d) {
       return html`<span class="tick tick--sending" aria-hidden="true">…</span> Sending`;
     case "pending":
       return html`<span class="tick tick--due" aria-hidden="true">◷</span> Waiting to be sent`;
+    case "skipped":
+      return html`<span class="tick tick--skipped" aria-hidden="true">–</span> Not sent: you replied “delete”`;
     default:
       return html`<span class="tick tick--failed" aria-hidden="true">✕</span> ${d.error}`;
   }

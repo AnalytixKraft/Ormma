@@ -3,8 +3,9 @@
  * not yet sent:
  *
  *   - the reminder, at the reminder time, to where Settings says (the linked
- *     phone, your number, or a group): every birthday message the day holds,
- *     and the birthdays of the next few days;
+ *     phone, your number, or a group): a message for each wish the day holds
+ *     — "delete" in reply to one, and that wish is not sent (capture.mjs) —
+ *     and one of the birthdays of the next few days;
  *   - a wish for each birthday or anniversary that falls today, at its own
  *     time (or the wish time in Settings), to where its row on the People
  *     page says: a group, or their number.
@@ -14,7 +15,8 @@
  * events, the tasks due, tomorrow's events — when there is anything to say,
  * and each event's reminder at its time.
  *
- * Each message has a key — reminder:<day>, wish:<day>:<person>,
+ * Each message has a key — reminder:<day>:<person> (and reminder:<day> for
+ * the days ahead), wish:<day>:<person>,
  * agenda:<day>, event:<event>:<the day it starts>:<minutes before> — and a
  * message whose key is marked sent is never sent again: not on the next
  * tick, not after a restart, not when someone presses Send now. If the
@@ -49,12 +51,13 @@ import {
 import {
   defaultTemplateFor,
   renderAgenda,
+  renderComingUp,
   renderEventReminder,
   renderMissedAlert,
   renderRefusedAlert,
-  renderReminder,
   renderTestAlert,
   renderWish,
+  renderWishNote,
 } from "./messages.mjs";
 import { directJid, formatPhone, phoneOfJid } from "./phone.mjs";
 
@@ -159,7 +162,8 @@ function planCalendar(db, settings, date, to) {
 /* Today's messages: the reminder first, then the wishes and the calendar's
  * messages by their time. A wish whose person has no usable "Send to" is
  * still listed, with to: null, so the Today page and the reminder can say
- * so; it is never sent. */
+ * so; it is never sent. Nor is one skipped ("delete" in reply to its
+ * reminder): it is listed, its delivery says so. */
 export function planDay(db, settings, date, { linkedPhone = "" } = {}) {
   const day = isoDate(date);
   const people = db.people.active();
@@ -187,23 +191,19 @@ export function planDay(db, settings, date, { linkedPhone = "" } = {}) {
   const messages = [...wishes, ...calendar].sort((a, b) => parseTime(a.time) - parseTime(b.time));
 
   const reminderTo = destinationOf(settings.reminderTo, settings.myPhone, groupNames, linkedPhone);
-  const later = reminderTo ? upcomingBirthdays(people, date, settings.daysAhead).filter((u) => u.inDays > 0) : [];
-  if (!reminderTo || (!wishes.length && !later.length)) return messages;
-
-  const reminder = {
-    key: `reminder:${day}`,
-    kind: "reminder",
-    day,
-    time: settings.reminderTime,
-    to: reminderTo,
-    person: null,
-    text: renderReminder({
-      date,
-      wishes: wishes.map((w) => ({ ...w, sent: db.deliveries.get(w.key)?.status === "sent" })),
-      later,
-    }),
-  };
-  return [reminder, ...messages];
+  if (!reminderTo) return messages;
+  const reminder = (key, fields) => ({ key, kind: "reminder", day, time: settings.reminderTime, to: reminderTo, person: null, ...fields });
+  // A wish's own reminder, for the reply that stops it — none for a wish
+  // that went before its reminder did.
+  const notes = wishes
+    .map((wish) => ({ wish, key: `reminder:${day}:${wish.person.id}`, state: db.deliveries.get(wish.key)?.status }))
+    .filter(({ key, state }) => state !== "sent" || db.deliveries.get(key))
+    .map(({ wish, key, state }) =>
+      reminder(key, { person: wish.person, title: wish.person.name, text: renderWishNote({ date, wish, state: state === "skipped" ? "skipped" : null }) }),
+    );
+  const later = upcomingBirthdays(people, date, settings.daysAhead).filter((u) => u.inDays > 0);
+  if (later.length) notes.push(reminder(`reminder:${day}`, { text: renderComingUp({ later }) }));
+  return [...notes, ...messages];
 }
 
 /* Whether a job with this delivery row should be tried now. */
@@ -212,6 +212,7 @@ function eligible(delivery, at, force) {
   const age = at.getTime() - Date.parse(delivery.updated_at);
   switch (delivery.status) {
     case "sent":
+    case "skipped": // "delete", said in reply to its reminder
       return false;
     case "pending": // an alert not tried yet
       return true;
@@ -294,7 +295,7 @@ export function createScheduler({ db, bridge, log, clock = () => new Date(), pau
         const items = planDay(db, settings, day, { linkedPhone })
           .filter((job) => job.kind === "wish" && job.to && !addedAfter(job.person, day, settings.timezone))
           .map((job) => ({ job, delivery: db.deliveries.get(job.key) }))
-          .filter(({ delivery }) => delivery?.status !== "sent" && !delivery?.alerted_at);
+          .filter(({ delivery }) => !["sent", "skipped"].includes(delivery?.status) && !delivery?.alerted_at);
         if (items.length) days.push({ date: day, items });
       }
       if (days.length) {
@@ -411,6 +412,8 @@ export function createScheduler({ db, bridge, log, clock = () => new Date(), pau
       last.waiting = null;
       for (const [i, job] of jobs.entries()) {
         if (i > 0) await pause(gap());
+        // Stopped by a reply while the ones before it went.
+        if (db.deliveries.get(job.key)?.status === "skipped") continue;
         db.deliveries.begin(job, clock().toISOString());
         try {
           const result = await bridge.send({ chatId: job.to.id, text: job.text, key: job.key });

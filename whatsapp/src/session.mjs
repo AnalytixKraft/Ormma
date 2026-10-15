@@ -287,6 +287,9 @@ export async function startSession() {
   let starting = Promise.resolve();
   const groupMetadata = new TtlCache(GROUP_METADATA_TTL_MS);
   const sent = new TtlCache(IDEMPOTENCY_TTL_MS);
+  /* The ids of the messages sent, as long as their keys are remembered: the
+   * owner's reply to one of them is held for the app (commands.mjs). */
+  const ours = new TtlCache(IDEMPOTENCY_TTL_MS);
   const inflight = new Map();
   /* Direct messages: whom we have just written to (ignoresSender lets their
    * receipts through, for LISTEN_MS), when (the hourly cap), and which
@@ -483,7 +486,7 @@ export async function startSession() {
         try {
           const mine = myJids(socket);
           for (const message of messages) {
-            const read = readMessage(message, mine, commandChats, everyMessage);
+            const read = readMessage(message, mine, commandChats, everyMessage, Date.now(), ours);
             // The log has the chat's kind and the message's id: never its
             // text, never who sent it.
             const added = read?.command ? held.add(read.command) : null;
@@ -855,7 +858,12 @@ export async function startSession() {
     // Record success whenever it lands — including after we have already
     // answered "timed out" below — so the retry that answer invites is
     // deduplicated instead of posting the message twice.
-    delivery.then((result) => sent.set(key, result), () => {}).finally(() => inflight.delete(key));
+    delivery
+      .then((result) => {
+        sent.set(key, result);
+        ours.set(result.message_id, true);
+      }, () => {})
+      .finally(() => inflight.delete(key));
     const result = await withTimeout(
       delivery,
       SEND_TIMEOUT_MS,

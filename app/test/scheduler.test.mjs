@@ -101,36 +101,45 @@ test("someone with no “Send to” is listed, and never sent", async () => {
   assert.equal(job.to, null);
 });
 
-test("the morning reminder lists every message of the day — time, where, what — before they go", async () => {
-  const { db, bridge, scheduler, anu, at } = setup("2026-09-30T00:31:00Z"); // 06:01 IST
+test("the morning reminder is a message for each wish — time, where, what — before they go, then one of the days ahead", async () => {
+  const { db, bridge, scheduler, anu, biju, cara, at } = setup("2026-09-30T00:31:00Z"); // 06:01 IST
   db.settings.save({ reminderTo: "self", reminderTime: "06:00" });
   db.people.update(anu, { ...db.people.get(anu), sendTime: "09:30" });
   await scheduler.run();
-  assert.equal(bridge.sent.length, 1);
-  const [reminder] = bridge.sent;
-  assert.equal(reminder.key, "reminder:2026-09-30");
-  assert.equal(reminder.chatId, `${LINKED_PHONE}@s.whatsapp.net`, "to the linked phone itself");
-  assert.equal(
-    reminder.text,
-    [
-      "🎉 *Today's wishes* · Wed 30 Sep",
-      "",
-      "• *08:00* → Youth — 🎂 Biju",
-      "> 🎉 Happy birthday, *Biju*! 🎂",
-      "> Wishing you a wonderful year ahead, full of joy, good health and blessings. Have a lovely day! 🥳",
-      "",
-      "⚠️ 🎂 Cara — no “Send to” chosen, so nothing will be sent",
-      "",
-      "• *09:30* → +447700900001 — 🎂 Anu Joseph (turns 30)",
-      "> Happy 30th, Anu! 🎂",
-      "",
-      "*Coming up*",
-      "• Tomorrow — 🎂 Dev",
-    ].join("\n"),
+  assert.deepEqual(
+    bridge.sent.map((s) => s.key),
+    [`reminder:2026-09-30:${biju}`, `reminder:2026-09-30:${cara}`, `reminder:2026-09-30:${anu}`, "reminder:2026-09-30"],
   );
+  assert.ok(bridge.sent.every((s) => s.chatId === `${LINKED_PHONE}@s.whatsapp.net`), "to the linked phone itself");
+  assert.deepEqual(
+    bridge.sent.map((s) => s.text),
+    [
+      [
+        "🎉 *Today's wish* · Wed 30 Sep",
+        "🎂 Biju — *08:00* → Youth",
+        "> 🎉 Happy birthday, *Biju*! 🎂",
+        "> Wishing you a wonderful year ahead, full of joy, good health and blessings. Have a lovely day! 🥳",
+        "",
+        "Reply “delete” to this and it won’t be sent.",
+      ].join("\n"),
+      ["🎉 *Today's wish* · Wed 30 Sep", "⚠️ 🎂 Cara — no “Send to” chosen, so nothing will be sent"].join("\n"),
+      ["🎉 *Today's wish* · Wed 30 Sep", "🎂 Anu Joseph (turns 30) — *09:30* → +447700900001", "> Happy 30th, Anu! 🎂", "", "Reply “delete” to this and it won’t be sent."].join("\n"),
+      ["🎉 *Coming up*", "• Tomorrow — 🎂 Dev"].join("\n"),
+    ],
+  );
+  assert.equal(db.deliveries.get(`reminder:2026-09-30:${biju}`).person_id, biju, "each knows whose wish it is about");
   at("2026-09-30T02:31:00Z"); // 08:01 IST: Biju's
   await scheduler.run();
-  assert.equal(bridge.sent.length, 2);
+  assert.deepEqual(bridge.sent.slice(4).map((s) => s.key), [`wish:2026-09-30:${biju}`]);
+});
+
+test("a wish sent before its reminder (Send now) gets none; no days ahead, no message of them", async () => {
+  const { db, bridge, scheduler, anu, biju, cara, at } = setup("2026-09-30T00:00:00Z"); // 05:30 IST
+  db.settings.save({ reminderTo: "self", daysAhead: 0 });
+  await scheduler.sendNow(db.people.get(anu));
+  at("2026-09-30T01:31:00Z"); // 07:01 IST
+  await scheduler.run();
+  assert.deepEqual(bridge.sent.slice(1).map((s) => s.key), [`reminder:2026-09-30:${biju}`, `reminder:2026-09-30:${cara}`]);
 });
 
 test("the reminder can go to my number or a group instead, and nowhere by default", async () => {
@@ -139,7 +148,59 @@ test("the reminder can go to my number or a group instead, and nowhere by defaul
   assert.equal(bridge.sent.length, 0);
   db.settings.save({ reminderTo: "direct", myPhone: MY_PHONE });
   await scheduler.run();
-  assert.deepEqual(bridge.sent.map((s) => s.chatId), [`${MY_PHONE}@s.whatsapp.net`]);
+  assert.equal(bridge.sent.length, 4);
+  assert.ok(bridge.sent.every((s) => s.chatId === `${MY_PHONE}@s.whatsapp.net`));
+});
+
+test("a wish stopped (“delete” in reply to its reminder) is not sent — not by Send today's messages now, not missed the next morning — but Send now sends it", async () => {
+  const { db, bridge, scheduler, biju, at } = setup("2026-09-30T01:31:00Z"); // 07:01 IST
+  db.settings.save({ reminderTo: "self", alertTo: "self" });
+  await scheduler.run();
+  const wish = scheduler.agenda().find((job) => job.key === `wish:2026-09-30:${biju}`);
+  const stop = () => db.deliveries.skip({ key: wish.key, day: wish.day, person: wish.person, to: wish.to }, "2026-09-30T01:40:00.000Z", "You replied “delete” to its morning reminder.");
+  assert.equal(stop(), true);
+  at("2026-09-30T02:31:00Z"); // 08:01 IST
+  await scheduler.run();
+  await scheduler.run({ force: true });
+  await scheduler.run({ force: true, only: wish.key });
+  assert.ok(!bridge.sent.some((s) => s.key === wish.key));
+  assert.equal(scheduler.agenda().find((job) => job.key === wish.key).delivery.status, "skipped");
+  assert.match(scheduler.agenda().find((job) => job.key === `reminder:2026-09-30:${biju}`).text, /It won’t be sent: you said “delete”\./);
+
+  // The next morning: a wish stopped is not a wish missed.
+  at("2026-10-01T01:31:00Z");
+  await scheduler.run();
+  assert.ok(!bridge.sent.some((s) => s.key.startsWith("alert:")));
+
+  const other = setup("2026-09-30T01:31:00Z");
+  other.db.settings.save({ reminderTo: "self" });
+  const job = other.scheduler.agenda().find((j) => j.key === `wish:2026-09-30:${other.biju}`);
+  other.db.deliveries.skip({ key: job.key, day: job.day, person: job.person, to: job.to }, "2026-09-30T01:40:00.000Z", "You replied “delete”.");
+  const result = await other.scheduler.sendNow(other.db.people.get(other.biju));
+  assert.equal(result.sentNow, true, "Send now: sent after all");
+  assert.equal(other.db.deliveries.get(job.key).status, "sent");
+  assert.equal(other.db.deliveries.skip({ key: job.key, day: job.day, person: job.person, to: job.to }, "2026-09-30T05:00:00.000Z", "Too late."), false, "a wish sent stays sent");
+});
+
+test("a wish stopped while the ones before it go out is not sent", async () => {
+  const { db, bridge, biju } = setup();
+  let stopped = false;
+  const scheduler = createScheduler({
+    db,
+    bridge,
+    log: silentLog,
+    clock: () => new Date("2026-09-30T03:00:00Z"),
+    gap: () => 0,
+    pause: async () => {
+      // Between Anu's wish and Biju's, "delete" comes in.
+      if (stopped) return;
+      stopped = db.deliveries.skip({ key: `wish:2026-09-30:${biju}`, day: "2026-09-30", person: db.people.get(biju), to: null }, "2026-09-30T03:00:01.000Z", "You replied “delete”.");
+    },
+  });
+  await scheduler.run();
+  assert.equal(stopped, true);
+  assert.deepEqual(bridge.sent.map((s) => s.key.split(":")[0]), ["wish"], "Anu's only");
+  assert.equal(db.deliveries.get(`wish:2026-09-30:${biju}`).status, "skipped");
 });
 
 test("paused sends nothing on its own; Send today's messages now still does", async () => {

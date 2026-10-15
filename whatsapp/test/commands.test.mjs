@@ -121,6 +121,32 @@ test("a reply of 📅 carries the line it replies to; wrapped and captioned mess
   assert.equal(command({ text: `📅 ${"x".repeat(5000)}` }).text.length, 2000);
 });
 
+test("the owner's reply to a message the bridge sent is held, mark or not — anyone else's, or a reply to something else, is not", () => {
+  const ours = new Set(["3EB0NOTE"]);
+  const reply = (fields = {}, quotedId = "3EB0NOTE", text = "delete") =>
+    readMessage(
+      message({ chat: ME, content: { extendedTextMessage: { text, contextInfo: { stanzaId: quotedId, quotedMessage: { conversation: "🎉 *Today's wish* · Thu 8 Oct" } } } }, ...fields }),
+      mine,
+      chosen,
+      new Set(),
+      NOW,
+      ours,
+    );
+  const held = reply().command;
+  assert.deepEqual([held.chat, held.text, held.quoted_id, held.marked, held.mark], ["self", "delete", "3EB0NOTE", false, "reply"]);
+  assert.equal(reply({ chat: GROUP }).command.mark, "reply", "the owner's, in a chosen group");
+  assert.equal(reply({ chat: GROUP, fromMe: false }), null, "not someone else's");
+  assert.equal(reply({}, "3EB0OTHER"), null, "not a reply to another message");
+  assert.equal(reply({ chat: OTHER_GROUP }), null, "not in a chat not chosen");
+  assert.equal(readMessage(message({ chat: ME, text: "delete" }), mine, chosen, new Set(), NOW, ours), null, "not without a reply");
+  assert.equal(reply({}, "3EB0NOTE", "📅 delete").command.mark, "calendar", "marked, it is what its mark says");
+  assert.equal(
+    readMessage(message({ chat: ME, content: { extendedTextMessage: { text: "delete", contextInfo: { stanzaId: "3EB0NOTE" } } } }), mine, chosen, new Set(), NOW),
+    null,
+    "the bridge's own messages unknown (restarted): not held",
+  );
+});
+
 test("held until the app takes them: each once, thirty an hour a chat, a hundred at most, for three days", () => {
   const held = new HeldCommands();
   const c = (id, chat = GROUP) => ({ id, chat: "group", chat_id: chat, sent_at: "", text: id, quoted: null });

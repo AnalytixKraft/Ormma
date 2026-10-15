@@ -7,10 +7,11 @@ import {
   alertSummary,
   occasionNote,
   renderMissedAlert,
+  renderComingUp,
   renderRefusedAlert,
-  renderReminder,
   renderTestAlert,
   renderWish,
+  renderWishNote,
 } from "../src/messages.mjs";
 
 const today = { year: 2026, month: 9, day: 30 };
@@ -33,31 +34,29 @@ test("unknown braces are left alone", () => {
   assert.equal(renderWish("Hi {name} {nickname}", { person: anu, date: today }), "Hi Anu Joseph {nickname}");
 });
 
-test("the reminder quotes each message, flags a missing “Send to”, and cuts a long one short", () => {
-  const long = "x".repeat(300);
-  const text = renderReminder({
-    date: today,
-    wishes: [
-      { time: "00:00", to: { label: "Youth" }, person: anu, text: "Happy birthday!\n\nFrom all of us", sent: true },
-      { time: "08:00", to: null, person: biju, text: "" },
-      { time: "09:00", to: { label: "+447700900001" }, person: { ...biju, name: "Long" }, text: long, sent: false },
-    ],
-    later: upcomingBirthdays([{ id: 3, name: "Mary K", day: 1, month: 10, year: 1981 }], today, 3),
-  });
-  const lines = text.split("\n");
-  assert.equal(lines[0], "🎉 *Today's wishes* · Wed 30 Sep");
-  assert.equal(lines[2], "✓ *00:00* → Youth — 🎂 Anu Joseph (turns 30) · sent");
-  assert.deepEqual(lines.slice(3, 5), ["> Happy birthday!", "> From all of us"]);
-  assert.equal(lines[6], "⚠️ 🎂 Biju Thomas — no “Send to” chosen, so nothing will be sent");
-  assert.equal(lines[8], "• *09:00* → +447700900001 — 🎂 Long");
-  assert.equal(lines[9].length, 2 + 240);
-  assert.ok(lines[9].endsWith("…"));
-  assert.deepEqual(lines.slice(-2), ["*Coming up*", "• Tomorrow — 🎂 Mary K (turns 45)"]);
+test("a wish's reminder quotes its message, cut short if long, and says how to stop it — or that it will not go", () => {
+  const lines = (wish, state) => renderWishNote({ date: today, wish, state }).split("\n");
+  assert.deepEqual(lines({ time: "07:30", to: { label: "Youth" }, person: anu, text: "Happy birthday!\n\nFrom all of us" }), [
+    "🎉 *Today's wish* · Wed 30 Sep",
+    "🎂 Anu Joseph (turns 30) — *07:30* → Youth",
+    "> Happy birthday!",
+    "> From all of us",
+    "",
+    "Reply “delete” to this and it won’t be sent.",
+  ]);
+  assert.deepEqual(lines({ time: "08:00", to: null, person: biju, text: "" }), [
+    "🎉 *Today's wish* · Wed 30 Sep",
+    "⚠️ 🎂 Biju Thomas — no “Send to” chosen, so nothing will be sent",
+  ]);
+  const long = lines({ time: "09:00", to: { label: "+447700900001" }, person: { ...biju, name: "Long" }, text: "x".repeat(300) });
+  assert.equal(long[2].length, 2 + 240);
+  assert.ok(long[2].endsWith("…"));
+  assert.equal(lines({ time: "09:00", to: { label: "Youth" }, person: biju, text: "Hi" }, "skipped").at(-1), "It won’t be sent: you said “delete”.");
 });
 
-test("a day with nothing to send says so", () => {
-  const text = renderReminder({ date: today, wishes: [], later: [] });
-  assert.equal(text, "🎉 *Today's wishes* · Wed 30 Sep\n\nNo wishes to send today.");
+test("the days ahead are a message of their own", () => {
+  const later = upcomingBirthdays([{ id: 3, name: "Mary K", day: 1, month: 10, year: 1981 }, { id: 4, kind: "anniversary", name: "Tom & Ann", day: 3, month: 10, year: null }], today, 3);
+  assert.equal(renderComingUp({ later }), "🎉 *Coming up*\n• Tomorrow — 🎂 Mary K (turns 45)\n• Sat 3 Oct — 💍 Tom & Ann");
 });
 
 test("an anniversary counts years married, and has a default of its own", () => {
@@ -66,8 +65,8 @@ test("an anniversary counts years married, and has a default of its own", () => 
   assert.equal(occasionNote({ ...couple, year: 2025 }, today), "1 year");
   assert.equal(occasionNote({ ...couple, year: null }, today), "");
   assert.match(renderWish(DEFAULT_ANNIVERSARY_TEMPLATE, { person: couple, date: today }), /^💍 Happy anniversary, \*Joseph & Mary\*! 🎉/);
-  const text = renderReminder({ date: today, wishes: [{ time: "08:00", to: { label: "Youth" }, person: couple, text: "Happy {years}" }], later: [] });
-  assert.match(text, /• \*08:00\* → Youth — 💍 Joseph & Mary \(25 years\)/);
+  const text = renderWishNote({ date: today, wish: { time: "08:00", to: { label: "Youth" }, person: couple, text: "Happy {years}" } });
+  assert.match(text, /^💍 Joseph & Mary \(25 years\) — \*08:00\* → Youth$/m);
 });
 
 test("{years} and {ordinal} fill in for both kinds; {age} and {ordinal_age} still work", () => {
@@ -103,6 +102,8 @@ test("an alert about several messages names each, with its own reason and tries 
     ].join("\n"),
   );
   assert.equal(alertSummary(text), "2 messages were not sent");
+  const one = renderRefusedAlert({ maxAttempts: 6, items: [{ job: { ...reminder, person: anu }, delivery: { attempts: 6, error: "WhatsApp did not take the message." } }] });
+  assert.match(one, /^🗓️ \*Your morning reminder of Anu Joseph\* → the linked phone · 07:00$/m, "a wish's reminder names whose");
   assert.equal(alertSummary(renderTestAlert()), "test alert");
   assert.equal(alertSummary("⚠️ *Wish Calendar: a wish was not sent*\n\n…"), "a wish was not sent", "sent under the app's name before");
   assert.equal(alertSummary("something else"), "an alert");

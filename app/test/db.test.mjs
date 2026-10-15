@@ -268,3 +268,47 @@ test("migration 11: a 📝 message is a line on the day's page, taken off again 
   assert.equal(db.captures.record(message("C", "x"), "wish", 1), false, "a kind that is none of the three is not recorded");
   db.close();
 });
+
+test("migration 12 keeps every message sent, and a wish can be skipped — unless it has gone", () => {
+  const dir = mkdtempSync(join(tmpdir(), "bdr-"));
+  try {
+    const file = join(dir, "birthdays.db");
+    let db = openDb(file);
+    const to = { id: "120363000000000001@g.us", label: "Youth" };
+    const person = { id: 7, name: "Biju" };
+    db.deliveries.begin({ key: "wish:2026-10-08:7", day: "2026-10-08", kind: "wish", person, to }, "2026-10-08T02:30:00.000Z");
+    db.deliveries.succeed("wish:2026-10-08:7", "M1", "2026-10-08T02:30:01.000Z");
+    db.deliveries.begin({ key: "reminder:2026-10-08:8", day: "2026-10-08", kind: "reminder", person: { id: 8, name: "Anu" }, title: "Anu", to }, "2026-10-08T01:30:00.000Z");
+    db.deliveries.succeed("reminder:2026-10-08:8", "M2", "2026-10-08T01:30:01.000Z");
+    db.close();
+    // Back to version 11: the deliveries table with the CHECK from before.
+    const raw = new DatabaseSync(file);
+    raw.exec(`
+      CREATE TABLE deliveries_11 AS SELECT * FROM deliveries;
+      DROP TABLE deliveries;
+      CREATE TABLE deliveries (
+        key TEXT PRIMARY KEY, day TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('wish', 'reminder', 'test', 'alert', 'event', 'agenda', 'capture')),
+        person_id INTEGER, person_name TEXT, chat_id TEXT NOT NULL, chat_subject TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL CHECK (status IN ('pending', 'sending', 'sent', 'failed')),
+        attempts INTEGER NOT NULL DEFAULT 0, message_id TEXT, error TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        text TEXT, alerted_at TEXT, title TEXT);
+      INSERT INTO deliveries SELECT * FROM deliveries_11;
+      DROP TABLE deliveries_11;
+      PRAGMA user_version = 11;`);
+    raw.close();
+
+    db = openDb(file);
+    assert.deepEqual([db.deliveries.get("wish:2026-10-08:7").status, db.deliveries.get("wish:2026-10-08:7").message_id], ["sent", "M1"]);
+    assert.equal(db.deliveries.wishNote("M2").person_id, 8, "a wish's reminder, found by its message");
+    assert.equal(db.deliveries.wishNote("M1"), null, "a wish is not a reminder");
+    const why = "You replied “delete” to its morning reminder.";
+    assert.equal(db.deliveries.skip({ key: "wish:2026-10-08:7", day: "2026-10-08", person, to }, "2026-10-08T03:00:00.000Z", why), false, "sent: too late");
+    assert.equal(db.deliveries.skip({ key: "wish:2026-10-08:8", day: "2026-10-08", person: { id: 8, name: "Anu" }, to }, "2026-10-08T03:00:00.000Z", why), true);
+    const skipped = db.deliveries.get("wish:2026-10-08:8");
+    assert.deepEqual([skipped.status, skipped.attempts, skipped.error, skipped.person_name], ["skipped", 0, why, "Anu"]);
+    db.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
