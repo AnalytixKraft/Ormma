@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Ormma: a personal diary, calendar and reminders — and birthday wishes — over WhatsApp. See ../README.md.",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "main": "src/main.mjs",
   "engines": {

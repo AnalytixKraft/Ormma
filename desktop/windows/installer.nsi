@@ -38,7 +38,7 @@ VIAddVersionKey "CompanyName" "AnalytixKraft"
 VIAddVersionKey "FileDescription" "Ormma setup"
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "ProductVersion" "${VERSION}"
-VIAddVersionKey "LegalCopyright" "© 2026 AnalytixKraft · Apache License 2.0"
+VIAddVersionKey "LegalCopyright" "Ormma by AnalytixKraft · © 2026 · GNU AGPL-3.0"
 
 !define MUI_ICON "${ICON}"
 !define MUI_UNICON "${ICON}"
@@ -49,6 +49,12 @@ VIAddVersionKey "LegalCopyright" "© 2026 AnalytixKraft · Apache License 2.0"
 !define MUI_FINISHPAGE_RUN_TEXT "Open Ormma"
 !define MUI_FINISHPAGE_LINK "Read the guide"
 !define MUI_FINISHPAGE_LINK_LOCATION "https://github.com/AnalytixKraft/Ormma#readme"
+
+; The AGPL-3.0 is not something to accept before using Ormma (its section
+; 9): the page says so, and goes on with Next, not "I Agree".
+!define MUI_LICENSEPAGE_TEXT_TOP "Ormma is free software, by AnalytixKraft, under the GNU AGPL-3.0."
+!define MUI_LICENSEPAGE_TEXT_BOTTOM "You need not accept this licence to install or use Ormma. It says what you may do if you change Ormma or share it."
+!define MUI_LICENSEPAGE_BUTTON "$(^NextBtn)"
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "${SOURCE}\LICENSE.txt"

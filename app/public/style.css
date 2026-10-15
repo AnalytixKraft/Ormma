@@ -232,6 +232,20 @@ p { margin: 0 0 0.8em; }
   border-radius: 3px;
   box-shadow: var(--page-shadow);
 }
+
+/* At the foot of every page, on the cover's inside: who made it, its
+ * licence, its source (layout.mjs, colophon). */
+.colophon {
+  max-width: 1120px;
+  margin: -36px auto 32px;
+  padding: 0 20px;
+  font: 500 0.74rem/1.6 var(--font-ui);
+  letter-spacing: 0.05em;
+  text-align: center;
+  color: color-mix(in srgb, var(--foil) 72%, transparent);
+}
+.colophon a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.colophon a:hover { color: var(--foil); }
 .page--wide { max-width: 1360px; }
 .page--bare { background: transparent; box-shadow: none; padding-top: 8vh; }
 

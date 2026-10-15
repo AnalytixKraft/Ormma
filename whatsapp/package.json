@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "The WhatsApp side of Ormma: posts text through a linked device, and hands over 📅 messages. See README.md.",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "main": "src/main.mjs",
   "scripts": {

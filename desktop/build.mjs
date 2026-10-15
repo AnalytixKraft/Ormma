@@ -109,8 +109,8 @@ function payload() {
   for (const name of ["package.json", "package-lock.json", "src", "public"]) copy(`app/${name}`);
   for (const name of ["package.json", "package-lock.json", "src"]) copy(`whatsapp/${name}`);
   for (const name of ["package.json", "launcher.mjs", "lib", "public"]) copy(`desktop/${name}`);
-  // Apache 2.0, section 4: whoever gets the app gets its licence and its
-  // NOTICE, which credits AnalytixKraft.
+  // Whoever gets the app gets its licence (the AGPL-3.0) and NOTICE — the
+  // credit to AnalytixKraft, which its section 7(b) term asks them to keep.
   copy("LICENSE");
   copy("NOTICE");
   say("installing the app's and the bridge's packages");
@@ -161,7 +161,7 @@ function infoPlist() {
     LSApplicationCategoryType: "public.app-category.productivity",
     // Node 24's own minimum.
     LSMinimumSystemVersion: "13.5",
-    NSHumanReadableCopyright: "© 2026 AnalytixKraft · Apache License 2.0",
+    NSHumanReadableCopyright: "Ormma by AnalytixKraft · © 2026 · GNU AGPL-3.0",
   };
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -259,7 +259,7 @@ async function buildWindows(files) {
             "--product-version", VERSION,
             "--file-version", VERSION,
             "--file-description", "Ormma",
-            "--copyright", "© 2026 AnalytixKraft · Apache License 2.0",
+            "--copyright", "Ormma by AnalytixKraft · © 2026 · GNU AGPL-3.0",
             "--original-filename", "Ormma.exe",
           ],
           { cwd: src },

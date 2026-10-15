@@ -614,6 +614,11 @@ test("the pages are a diary: the cover's icon and manifest are served, the day i
   // Ormma's own words are English: no Malayalam on its pages but what someone wrote.
   assert.doesNotMatch(home, /[\u0D00-\u0D7F]/);
   assert.doesNotMatch(await (await get("/login")).text(), /[\u0D00-\u0D7F]/);
+  // The AGPL-3.0's notices, and the credit NOTICE asks everyone to keep, on
+  // every page — signed in or not.
+  for (const page of [home, await (await get("/login")).text()]) {
+    assert.match(page, /<footer class="colophon">\s*<a href="https:\/\/github.com\/AnalytixKraft\/Ormma">Ormma<\/a> by AnalytixKraft · © 2026 · free software under the <a href="https:\/\/github.com\/AnalytixKraft\/Ormma\/blob\/main\/LICENSE">GNU AGPL-3.0<\/a>, with no warranty · <a href="https:\/\/github.com\/AnalytixKraft\/Ormma">source code<\/a>/);
+  }
   assert.match(home, /<h2 id="messages-title">Messages<\/h2>/);
   assert.match(await (await get("/calendar", cookie)).text(), /<nav class="months" aria-label="The months of \d{4}">(<a href="\/calendar\?month=\d{4}-\d{2}"[^>]*>[A-Z][a-z]{2}<span class="visually-hidden">[^<]*<\/span><\/a>){12}<\/nav>/);
 });
