@@ -3,6 +3,7 @@
  * something is wrong). */
 
 import { MONTHS, WEEKDAYS, ageOn, formatDayMonth, isLeapYear, weekdayOf, zonedNow } from "../dates.mjs";
+import { desktopHints } from "../desktop.mjs";
 import { KIND_ICON } from "../messages.mjs";
 import { html, raw } from "./html.mjs";
 
@@ -112,7 +113,11 @@ export function dayHeader({ date, size = "large", people = [], caption = null, h
 
 /* --------------------------------------------------------- sign in, setup */
 
+/* A step from desktopHints() on a page: the line to type, as code. */
+export const stepHtml = (step) => (step.menu ? step.menu : html`run <code>${step.command}</code> in ${step.terminal}`);
+
 export function signInPage({ today, error, assets }) {
+  const desktop = desktopHints();
   return layout({
     title: "Sign in",
     signedIn: false,
@@ -131,13 +136,16 @@ export function signInPage({ today, error, assets }) {
     </label>
     ${error ? html`<p class="field__error" role="alert">${error}</p>` : ""}
     <button type="submit" class="button">Sign in</button>
-    <p class="hint">First time: the password is ADMIN_PASSWORD in the .env file on the computer that runs this app. Forgot a password set in Settings? Run <code>bash scripts/reset-password.sh</code> there.</p>
+    ${desktop
+      ? html`<p class="hint">Forgot it? On this computer, ${stepHtml(desktop.reset)} — then open Ormma, and it asks you to choose a new one.</p>`
+      : html`<p class="hint">First time: the password is ADMIN_PASSWORD in the .env file on the computer that runs this app. Forgot a password set in Settings? Run <code>bash scripts/reset-password.sh</code> there.</p>`}
   </form>
 </div>`,
   });
 }
 
 export function notConfiguredPage({ problems, assets }) {
+  const desktop = desktopHints();
   return layout({
     title: "Setup needed",
     signedIn: false,
@@ -149,9 +157,11 @@ export function notConfiguredPage({ problems, assets }) {
   </div>
   <div class="signin__form">
   <h2>Finish the setup</h2>
-  <p>This app will not open until these are fixed in the .env file:</p>
+  <p>This app will not open until these are fixed in ${desktop ? html`its settings file, <code>${desktop.config}</code>` : "the .env file"}:</p>
   <ul class="problems">${problems.map((p) => html`<li>${p}</li>`)}</ul>
-  <p>From the project folder, run <code>bash scripts/setup.sh</code>, then <code>docker compose up -d</code>.</p>
+  ${desktop
+    ? html`<p>Then restart Ormma: ${stepHtml(desktop.restart)}.</p>`
+    : html`<p>From the project folder, run <code>bash scripts/setup.sh</code>, then <code>docker compose up -d</code>.</p>`}
 </div></div>`,
   });
 }

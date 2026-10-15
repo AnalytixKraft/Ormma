@@ -10,6 +10,7 @@ import { createServer } from "node:http";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { COOKIE, MAX_AGE_S, createAuth, createThrottle } from "./auth.mjs";
+import { desktopHints } from "./desktop.mjs";
 import {
   HttpError,
   clientAddress,
@@ -210,7 +211,11 @@ export async function createApp({ config, problems = [], db, bridge, scheduler, 
       sendHtml(
         res,
         500,
-        errorPage({ status: 500, message: "The app hit an unexpected error. Its log says more: docker compose logs app.", assets }),
+        errorPage({
+          status: 500,
+          message: `The app hit an unexpected error. Its log says more: ${desktopHints() ? `app.log, in ${desktopHints().logs}` : "docker compose logs app"}.`,
+          assets,
+        }),
       );
     }
   });

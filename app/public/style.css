@@ -618,11 +618,13 @@ fieldset .check { margin-top: 6px; }
 
 /* ------------------------------------------------------ the People table */
 
+/* Room for a whole number (+91 98765 43210) and a time on a 12-hour clock
+ * (07:30 PM), as the browser draws it on a computer set to one. */
 .people { table-layout: fixed; }
-.people th:nth-child(1) { width: 23%; }
-.people th:nth-child(2) { width: 16%; }
+.people th:nth-child(1) { width: 20%; }
+.people th:nth-child(2) { width: 17%; }
 .people th:nth-child(3) { width: 19%; }
-.people th:nth-child(4) { width: 11%; }
+.people th:nth-child(4) { width: 16%; }
 .th-note { display: block; margin-top: 2px; font-weight: 500; letter-spacing: 0.04em; text-transform: none; }
 .people__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .people input[type="time"] { min-width: 0; }

@@ -3,6 +3,8 @@
  * sentence for the person reading the page, and whose `code` is the bridge's
  * own, or `unreachable` / `app_token_missing` from this side. */
 
+import { desktopHints, stepText } from "./desktop.mjs";
+
 export class BridgeError extends Error {
   constructor({ code, status = null, state = null, detail = null }) {
     super(explain(code, state, detail));
@@ -22,15 +24,21 @@ export const STATE_LABELS = {
   conflict: "another WhatsApp Web session took over",
 };
 
-export function explain(code, state, detail) {
+export function explain(code, state, detail, desktop = desktopHints()) {
   switch (code) {
     case "unreachable":
-      return "The WhatsApp bridge is not answering. Check that its container is running: docker compose ps.";
+      return desktop
+        ? `The WhatsApp bridge is not answering. Ormma starts it again on its own within a minute; if this stays, ${stepText(desktop.restart)}.`
+        : "The WhatsApp bridge is not answering. Check that its container is running: docker compose ps.";
     case "app_token_missing":
     case "bridge_token_not_configured":
-      return "WHATSAPP_BRIDGE_TOKEN is not set. Run bash scripts/setup.sh, then docker compose up -d.";
+      return desktop
+        ? `WHATSAPP_BRIDGE_TOKEN is not set in ${desktop.config}. Restart Ormma, and it makes one: ${stepText(desktop.restart)}.`
+        : "WHATSAPP_BRIDGE_TOKEN is not set. Run bash scripts/setup.sh, then docker compose up -d.";
     case "unauthorized":
-      return "The app and the WhatsApp bridge hold different tokens. Run docker compose up -d so both read WHATSAPP_BRIDGE_TOKEN from .env again.";
+      return desktop
+        ? `The app and the WhatsApp bridge hold different tokens. Restart Ormma, so both read ${desktop.config} again: ${stepText(desktop.restart)}.`
+        : "The app and the WhatsApp bridge hold different tokens. Run docker compose up -d so both read WHATSAPP_BRIDGE_TOKEN from .env again.";
     case "not_connected":
       return `WhatsApp is not connected (${STATE_LABELS[state] || state || "unknown state"}). Link a phone in Settings → WhatsApp.`;
     case "not_a_member":
