@@ -264,6 +264,9 @@ test("when Claude cannot be had, a 📅 message is read by the rules; one withou
   late.at("2026-10-08T10:31:00Z"); // six hours after it was sent
   assert.equal(await late.capture.poll(), 0);
   assert.deepEqual([late.bridge.acked, late.db.events.count()], [["B"], 0], "let go, unread");
+  assert.equal(late.bridge.sent.length, 1, "and said so");
+  assert.match(late.bridge.sent[0].text, /a message was not read[\s\S]*Anu’s message of 10:00 in Family was let go/);
+  assert.doesNotMatch(late.bridge.sent[0].text, /Doctor/, "never its words");
 });
 
 test("a 📅 message is always added — the rules read it when Claude finds nothing in it", async () => {
@@ -286,6 +289,14 @@ test("a call Claude refuses pauses it for an hour — no asking again every poll
   at("2026-10-08T05:50:00Z");
   await capture.poll();
   assert.deepEqual([claude.asked.length, bridge.acked], [1, []], "asked once in the hour; the message waits");
+  assert.deepEqual(bridge.sent.map((m) => m.key), ["capture:claude-refused:2026-10-08"], "its owner is told");
+  assert.match(bridge.sent[0].text, /Claude can’t read your messages[\s\S]*Not scoped to a workspace\. Restart Ormma/);
+  at("2026-10-08T06:10:00Z");
+  await capture.poll();
+  assert.deepEqual([claude.asked.length, bridge.sent.length], [2, 1], "asked again after the hour, refused again: told once a day");
+  at("2026-10-09T05:00:00Z");
+  await capture.poll();
+  assert.equal(bridge.sent.filter((m) => m.key === "capture:claude-refused:2026-10-09").length, 1, "and again the next day");
 
   const muddled = setup([inFamily("C", "🙂", { marked: false })], { captureEvery: [FAMILY] }, fakeClaude({ "🙂": new ClaudeFailed("not JSON") }));
   assert.equal(await muddled.capture.poll(), 0);

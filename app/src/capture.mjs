@@ -447,6 +447,31 @@ const WAIT_FOR_CLAUDE_MS = 6 * 60 * 60_000;
 const CLAUDE_PAUSE_MS = { retry: 2 * 60_000, refused: 60 * 60_000 };
 const LATER = Symbol("later");
 
+/* Said once a day, where calendar messages go, when Claude refuses the
+ * call — the key, the account: nothing mends that but its owner. */
+export function renderClaudeRefused(why) {
+  const reason = String(why ?? "").trim() || "the API refused the call";
+  return [
+    "⚠️ *Ormma: Claude can’t read your messages*",
+    "",
+    `${reason.charAt(0).toUpperCase()}${reason.slice(1)}${/[.!?]$/.test(reason) ? "" : "."} Restart Ormma once that is put right.`,
+    "",
+    "Until then, a message that starts with 📅 or “remind me to …” is still added. Any other waits for Claude — six hours, then it is let go.",
+  ].join("\n");
+}
+
+/* A message that waited for Claude and was let go: when, where and whose
+ * — never its words. */
+function renderLetGo({ time, where, sender }) {
+  return [
+    "⚠️ *Ormma: a message was not read*",
+    "",
+    `Claude could not be had for six hours, so ${sender ? `${sender}’s message` : "your message"} of ${time}${where ? ` in ${where}` : ""} was let go — nothing was added.`,
+    "",
+    "Send it again, starting with 📅.",
+  ].join("\n");
+}
+
 /* `claude`: claude.mjs's reader, when there is an API key; else null, and
  * 📅 messages are read by the rules above, and no group can have every
  * message count. */
@@ -455,6 +480,7 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
   let timer = null;
   let lastProblem = null;
   let claudeAfter = 0;
+  let refused = null; // why Claude refused, until its owner is told
 
   /* Where a 📅 message was sent, by name: a group as WhatsApp last listed
    * it, or null for Message yourself. */
@@ -476,6 +502,7 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     } catch (err) {
       if (err.refused) {
         claudeAfter = clock().getTime() + CLAUDE_PAUSE_MS.refused;
+        refused = err.message;
         log.error({ err: err.message }, "📅 messages: Claude could not be used; trying again in an hour");
         return { later: true };
       }
@@ -769,8 +796,12 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
       if (!marked) {
         // Nothing reads a message without the 📅 but Claude: wait for it.
         if (clock().getTime() - Date.parse(command.sent_at) < WAIT_FOR_CLAUDE_MS) return LATER;
+        // Let go — and said so: it was meant for the calendar, perhaps.
         db.captures.record(command);
-        return null;
+        const { minute } = sentOn(command, settings);
+        const time = `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+        log.info({ message_id: command.id }, "📅 message: let go unread, Claude could not be had");
+        return { answer: { title: "A message not read", text: renderLetGo({ time, where, sender: command.sender ?? null }) } };
       }
       item = readCapture(command, { timeZone: settings.timezone, where });
     } else {
@@ -802,6 +833,19 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     if ([...held.chats].sort().join(" ") === chats.join(" ") && [...(held.every ?? [])].sort().join(" ") === every.join(" ")) return;
     await bridge.setCommandChats(chats, every);
     log.info({ self: chats.includes("self"), groups: chats.filter((c) => c !== "self").length, every_message: every.length }, "📅 messages: told the bridge where they count");
+  }
+
+  /* Claude refused the call: its owner is told where calendar messages go
+   * — once a day, however many messages wait or hours pass. */
+  async function tellRefused(settings) {
+    const why = refused;
+    refused = null;
+    const day = isoDate(zonedNow(clock(), settings.timezone));
+    try {
+      await scheduler.sendCalendarReply({ key: `capture:claude-refused:${day}`, title: "Claude can’t read your messages", text: renderClaudeRefused(why) });
+    } catch (err) {
+      log.warn({ err: err.message }, "📅 messages: that Claude refused the call was not said");
+    }
   }
 
   /* Takes what the bridge holds, answers each, and tells it to let them go.
@@ -849,6 +893,7 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
         }
         taken.push(command.id);
       }
+      if (refused) await tellRefused(settings);
       if (taken.length) {
         await bridge.ackCommands(taken).catch((err) => log.warn({ code: err.code }, "📅 messages: the bridge was not told; they are taken once all the same"));
       }
