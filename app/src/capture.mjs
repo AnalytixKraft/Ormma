@@ -462,13 +462,19 @@ export function renderClaudeRefused(why) {
 
 /* A message that waited for Claude and was let go: when, where and whose
  * — never its words. */
-function renderLetGo({ time, where, sender }) {
+function renderLetGo(which) {
+  return ["⚠️ *Ormma: a message was not read*", "", `Claude could not be had for six hours, so ${which} was let go — nothing was added.`, "", "Send it again, starting with 📅."].join("\n");
+}
+
+/* A message Claude read and found nothing in for the calendar or the
+ * diary — or answered in a way that could not be used: said, so that every
+ * message in a group where each one counts has its answer. */
+function renderNothing(which, unusable) {
   return [
-    "⚠️ *Ormma: a message was not read*",
+    `➖ Nothing added from ${which}`,
+    unusable ? "Claude’s reading of it could not be used." : "It did not read as an event, a task or a note.",
     "",
-    `Claude could not be had for six hours, so ${sender ? `${sender}’s message` : "your message"} of ${time}${where ? ` in ${where}` : ""} was let go — nothing was added.`,
-    "",
-    "Send it again, starting with 📅.",
+    "Meant for the calendar? Send it again, starting with 📅.",
   ].join("\n");
 }
 
@@ -521,6 +527,15 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
   function sentOn(command, settings) {
     const t = zonedNow(new Date(command.sent_at), settings.timezone);
     return { day: isoDate(t), minute: t.hour * 60 + t.minute };
+  }
+
+  /* "Anu’s message of 12:03 in Family": a message told of by when, where
+   * and whose — never its words. */
+  function which(command, settings) {
+    const { minute } = sentOn(command, settings);
+    const time = `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+    const where = whereOf(command);
+    return `${command.sender ? `${command.sender}’s message` : "your message"} of ${time}${where ? ` in ${where}` : ""}`;
   }
 
   /* "delete all …": counted, and asked about. Only where the owner alone
@@ -788,9 +803,11 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
     // Not an appointment or a to-do, but something to keep: the diary.
     if (!marked && item?.kind === "note") return addNote(command, command.text, settings);
     if (!marked && (asked.unusable || item?.kind === "none")) {
-      // Nothing for the calendar — or nothing Claude could make of it.
+      // Nothing for the calendar — or nothing Claude could make of it:
+      // nothing is added, and that is said.
       db.captures.record(command);
-      return null;
+      log.info({ message_id: command.id, unusable: Boolean(asked.unusable) }, "📅 message: nothing in it to add"); // never its text
+      return { answer: { title: "Nothing added", text: renderNothing(which(command, settings), Boolean(asked.unusable)) } };
     }
     if (!item || item.kind === "none" || item.kind === "note") {
       if (!marked) {
@@ -798,10 +815,8 @@ export function createCapture({ db, bridge, scheduler, log, claude = null, dataD
         if (clock().getTime() - Date.parse(command.sent_at) < WAIT_FOR_CLAUDE_MS) return LATER;
         // Let go — and said so: it was meant for the calendar, perhaps.
         db.captures.record(command);
-        const { minute } = sentOn(command, settings);
-        const time = `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
         log.info({ message_id: command.id }, "📅 message: let go unread, Claude could not be had");
-        return { answer: { title: "A message not read", text: renderLetGo({ time, where, sender: command.sender ?? null }) } };
+        return { answer: { title: "A message not read", text: renderLetGo(which(command, settings)) } };
       }
       item = readCapture(command, { timeZone: settings.timezone, where });
     } else {

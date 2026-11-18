@@ -222,7 +222,7 @@ test("a bridge without 📅 messages (or not there at all) is no error", async (
   assert.equal(await capture.poll(), 0);
 });
 
-test("with Claude, a group can have every message count: what is an event or a task is added, the rest let go quietly", async () => {
+test("with Claude, a group can have every message count: what is an event or a task is added, the rest is answered “nothing added”", async () => {
   const claude = fakeClaude({
     "Doctor tue 10 am": { kind: "event", title: "Doctor", day: "2026-10-13", endDay: null, time: "10:00", endTime: "" },
     "Thanks all!": { kind: "none" },
@@ -243,7 +243,9 @@ test("with Claude, a group can have every message count: what is an event or a t
   const doctor = db.events.between("2026-10-13", "2026-10-13")[0];
   assert.deepEqual([doctor.title, doctor.time, doctor.remind, doctor.notes], ["Doctor", "10:00", 5, "From WhatsApp: Family, Anu"]);
   assert.equal(db.events.between("2026-10-16", "2026-10-16")[0].title, "Dinner at Ravi's", "free-form, read by Claude");
-  assert.deepEqual(bridge.sent.map((s) => [s.key, s.chatId]), [["capture:A", FAMILY], ["capture:C", FAMILY]], "no answer to chat");
+  assert.deepEqual(bridge.sent.map((s) => [s.key, s.chatId]), [["capture:A", FAMILY], ["capture:B", FAMILY], ["capture:C", FAMILY]], "every message has its answer");
+  assert.match(bridge.sent[1].text, /^➖ Nothing added from Anu’s message of 10:00 in Family\nIt did not read as an event, a task or a note\./);
+  assert.doesNotMatch(bridge.sent[1].text, /Thanks/, "never its words");
   assert.deepEqual(bridge.acked, ["A", "B", "C"]);
 });
 
@@ -300,7 +302,8 @@ test("a call Claude refuses pauses it for an hour — no asking again every poll
 
   const muddled = setup([inFamily("C", "🙂", { marked: false })], { captureEvery: [FAMILY] }, fakeClaude({ "🙂": new ClaudeFailed("not JSON") }));
   assert.equal(await muddled.capture.poll(), 0);
-  assert.deepEqual([muddled.bridge.acked, muddled.bridge.sent], [["C"], []]);
+  assert.deepEqual([muddled.bridge.acked, muddled.bridge.sent.map((m) => m.key)], [["C"], ["capture:C"]]);
+  assert.match(muddled.bridge.sent[0].text, /Nothing added from Anu’s message of 10:00 in Family\nClaude’s reading of it could not be used\./);
 });
 
 test("a reply of “delete” to the app's own ✅ takes that off the calendar again — and nothing else is read as new", async () => {
@@ -340,7 +343,7 @@ test("“delete” that answers no message of the app's is read like any other",
   const claude = fakeClaude({ delete: { kind: "none" } });
   const { db, bridge, capture } = setup([inFamily("A", "delete", { marked: false, quoted_id: "someone-elses-message" })], { captureEvery: [FAMILY] }, claude);
   assert.equal(await capture.poll(), 0);
-  assert.deepEqual([claude.asked, bridge.sent, db.events.count()], [["A"], [], 0]);
+  assert.deepEqual([claude.asked, bridge.sent.map((m) => m.text.split("\n")[0]), db.events.count()], [["A"], ["➖ Nothing added from Anu’s message of 10:00 in Family"], 0]);
 });
 
 test("“delete all …” is read only from a message made of those words, and needs “all” or a range", () => {
@@ -531,7 +534,7 @@ test("in a group where every message counts, “note:” writes on the page with
   assert.equal(db.journal.get("2026-10-08").body, "10:00 — the plumber comes Thursday\n\n10:00 — Long day, the meeting ran late and the rain never stopped");
   assert.deepEqual(claude.asked, ["B", "C", "D"], "a note said in words is not read by Claude");
   assert.equal(db.events.between("2026-10-13", "2026-10-13")[0].title, "Dentist", "a 📅 message Claude calls a note is read by the rules instead");
-  assert.deepEqual(bridge.sent.map((s) => [s.key, s.chatId]), [["capture:A", FAMILY], ["capture:B", FAMILY], ["capture:D", FAMILY]], "chat gets no answer");
+  assert.deepEqual(bridge.sent.map((s) => [s.key, s.chatId]), [["capture:A", FAMILY], ["capture:B", FAMILY], ["capture:C", FAMILY], ["capture:D", FAMILY]], "chat is answered too: nothing added");
 });
 
 test("which days “yesterday”, “last week”, “Monday” or “5 Oct” were, seen from a Thursday", () => {

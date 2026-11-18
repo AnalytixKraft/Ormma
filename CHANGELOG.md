@@ -4,6 +4,7 @@ What changed in each release of Ormma. The desktop downloads are on the [release
 
 ## Unreleased
 
+- **Every message has its answer** in a group where every message counts: what Claude finds nothing in is answered “➖ Nothing added” — when it was sent and by whom — instead of being let go without a word.
 - **Told when Claude can’t read a message**: a refused API key is said on WhatsApp, once a day, where calendar messages go; and a message that waited six hours for Claude and was let go is said too — until now both showed only in the log and in Settings.
 
 ## 1.0.0 — 2026-10-15

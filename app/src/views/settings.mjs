@@ -86,7 +86,7 @@ function capturePicks({ captureChats, captureEvery }, groups, claudeModel, claud
   </div>
   <span class="hint">In a group you tick, <strong>anyone in it</strong> can add to the calendar — at most 30 messages an hour. Groups you don’t tick are not read at all.${groups.length ? "" : " Link WhatsApp to list your groups here."}</span>
   <p class="hint claude-note">${claudeModel
-    ? html`<strong>Claude reads them</strong> (${claudeModel}): each message, and the one it replies to, go to Anthropic to be read — so <code>📅 dinner at Ravi’s next Friday after 8</code> works too. In a group with <em>every message, no 📅</em> ticked, Claude adds what is an event or a task and lets the rest go.`
+    ? html`<strong>Claude reads them</strong> (${claudeModel}): each message, and the one it replies to, go to Anthropic to be read — so <code>📅 dinner at Ravi’s next Friday after 8</code> works too. In a group with <em>every message, no 📅</em> ticked, Claude adds what is an event or a task, and answers the rest too: nothing added.`
     : desktop
       ? html`Simple rules read them. With <code>ANTHROPIC_API_KEY</code> in Ormma’s settings file, <code>${desktop.config}</code> — and Ormma restarted — Claude reads them, free-form wording too, and a group can have <em>every message</em> count, no 📅 needed.`
       : html`Simple rules read them. With <code>ANTHROPIC_API_KEY</code> in the .env file, Claude reads them — free-form wording too — and a group can have <em>every message</em> count, no 📅 needed.`}</p>
